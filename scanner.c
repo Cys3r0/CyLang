@@ -3,6 +3,14 @@
 #include <string.h>
 #include <regex.h>
 
+//TODO: 
+//Create structs for all tokens, i.e ID struct with string, NUM with number etc.
+//Make peekToken method();
+//Create parser using peek token
+//Figure out how to parse non-exp strings
+//Figure out top-down operator precedence parsing
+
+
 
 typedef enum {
     ID,
