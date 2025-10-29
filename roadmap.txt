@@ -1,0 +1,6 @@
+
+__Longterm__ 
+
+Scanner: 
+- Add line/column numbers for each token
+    - Probably just counting number of newline characters there are
