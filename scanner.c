@@ -12,7 +12,7 @@
 
 
 typedef struct {
-    int tokenID;
+    int token_id;
     char * str;         // union for str + value (?)
     int value;
 } Token;
@@ -153,8 +153,8 @@ void init_string(String * s, int cap) {
     s->str = malloc(cap);
     s->len = 0;
 }
-
-void string_cpy(String * string, char * str, int str_len) {
+    
+    void string_cpy(String * string, char * str, int str_len) {
     if (str_len+1 > string->cap) {
         resize_string(string, str_len << 1);
     }
@@ -174,7 +174,7 @@ int str_len(char * str) {
     return i;
 }
 
-Token * init_token(int token_id, chat * str, int value) {
+Token * init_token(int token_id, char * str, int value) {
     Token * t = malloc(sizeof(Token));
     t->token_id = token_id;
     t->str = str;
@@ -183,17 +183,15 @@ Token * init_token(int token_id, chat * str, int value) {
 }
 
 
-Token * next_token(char ** str, regex_t regex) { // pass regex & m, regex should be initialized somewhere else, main?
+Token * next_token(char ** str, regex_t * regex, regmatch_t * m) { // pass regex & m, regex should be initialized somewhere else, main?
     // NEXT:
-    // FIX so that pointer of pointer is passed (so that str ptr can be increased by size of removed token )
-    // Create a new tokenize method that tokenizes the whole input
-    
+    // Debug next_token!!!!
 
     int token_id = -1;
     char * s = NULL;
     int value = 0;
 
-    if (regexec(&regex, &str, 25, m, 0) == 0) {
+    if (regexec(&regex, *str, 25, m, 0) == 0) {
         int token_len = m[0].rm_eo - m[0].rm_so;
         if (m[1].rm_so != -1) { 
             printf("SEMI\n");
@@ -298,7 +296,7 @@ Token * next_token(char ** str, regex_t regex) { // pass regex & m, regex should
             printf("WS\n");
             token_id = WS;
         }
-        str += m[0].rm_eo - m[0].rm_so;
+        *str += m[0].rm_eo - m[0].rm_so;
     }
 
     return init_token(token_id, s, value);
@@ -310,13 +308,22 @@ int main() {
     String * s = malloc(sizeof(String));
     TokenID * t = malloc(1000 * sizeof(TokenID));
 
+    //set up regex
+    regex_t * regex;
+    regmatch_t m[25];
+
+    
+    regcomp(&regex, rules, REG_EXTENDED);
+
     char * file = "if (abs == 10) print(10000); while (list) {a[]}";
     string_cpy(s, file, str_len(file));
-    tokenize(s, t);
-    printf("%s\n", file);
-    for (int i = 0; i < 20; i++) {
-        printf("%s ", enum_token_to_str(t[i]));
-    }
+    next_token(&file, regex, m);
+    
+
+    // printf("%s\n", file);
+    // for (int i = 0; i < 20; i++) {
+    //     printf("%s ", enum_token_to_str(t[i]));
+    // }
     printf("\n");
     printf("EXIT SUCCESS\n");
     exit(EXIT_SUCCESS);
