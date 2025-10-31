@@ -15,34 +15,14 @@ typedef struct {
     int token_id;
     char * str;         // union for str + value (?)
     int value;
-} Token;
+} token_t;
 
 typedef enum {
-    ID,
-    NUM,
-    ASSIGN,
-    SEMI,
-    LPAR,
-    RPAR,
-    LWING,
-    RWING,
-    LBRACKET,
-    RBRACKET,
-    ADD,
-    SUB,
-    MUL,
-    DIV,
-    MOD,
-    EQ,
-    NEQ,
-    LT,
-    LEQ,
-    GT,
-    GEQ,
-    IF,
-    WHILE,
-    WS,
-} TokenID;
+    ID, NUM, ASSIGN, SEMI, LPAR, RPAR,
+    LWING, RWING, LBRACKET, RBRACKET,
+    ADD, SUB, MUL, DIV, MOD, EQ, NEQ,
+    LT, LEQ, GT, GEQ, IF, WHILE, WS,
+} token_id_enum;
 
 
 char * rules = 
@@ -71,10 +51,7 @@ char * rules =
     "|([0-9]+)"
     "|([ \n]+)";
 
-
-
-
-char * enum_token_to_str(TokenID t) {
+char * token_to_str(token_id_enum t) {
     switch (t) {
         case ID: return "ID";
         case NUM: return "NUM";
@@ -103,6 +80,9 @@ char * enum_token_to_str(TokenID t) {
         default: return "NONE";
     }
 }
+
+
+
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
@@ -174,8 +154,8 @@ int str_len(char * str) {
     return i;
 }
 
-Token * init_token(int token_id, char * str, int value) {
-    Token * t = malloc(sizeof(Token));
+token_t * init_token(int token_id, char * str, int value) {
+    token_t * t = malloc(sizeof(token_t));
     t->token_id = token_id;
     t->str = str;
     t->value = value;
@@ -183,146 +163,140 @@ Token * init_token(int token_id, char * str, int value) {
 }
 
 
-Token * next_token(char ** str, regex_t * regex, regmatch_t * m) { // pass regex & m, regex should be initialized somewhere else, main?
+token_t * next_token(char ** str, regex_t regex, regmatch_t * m) { // pass regex & m, regex should be initialized somewhere else, main?
     // NEXT:
     // Debug next_token!!!!
+    // printf("Agh");
 
     int token_id = -1;
     char * s = NULL;
     int value = 0;
 
+
     if (regexec(&regex, *str, 25, m, 0) == 0) {
         int token_len = m[0].rm_eo - m[0].rm_so;
         if (m[1].rm_so != -1) { 
-            printf("SEMI\n");
             token_id = SEMI;
         }
         else if (m[2].rm_so != -1) { 
-            printf("ASSIGN\n");
             token_id = ASSIGN;
         }
         else if (m[3].rm_so != -1) { 
-            printf("LPAR\n");
             token_id = LPAR;
         }
         else if (m[4].rm_so != -1) { 
-            printf("RPAR\n");
             token_id = RPAR;
         }
         else if (m[5].rm_so != -1) { 
-            printf("LWING\n");
             token_id = LWING;
         }
         else if (m[6].rm_so != -1) { 
-            printf("RWING\n");
             token_id = RWING;
         }
         else if (m[7].rm_so != -1) { 
-            printf("LBRACKET\n");
             token_id = LBRACKET;
         }
         else if (m[8].rm_so != -1) { 
-            printf("RBRACKET\n");
             token_id = RBRACKET;
         }
         else if (m[9].rm_so != -1) {
-            printf("ADD\n");
             token_id = ADD;
         }
         else if (m[10].rm_so != -1) {
-            printf("SUB\n");
             token_id = SUB;
         }
         else if (m[11].rm_so != -1) {
-            printf("MUL\n");
             token_id = MUL;
         }
         else if (m[12].rm_so != -1) {
-            printf("DIV\n");
             token_id = DIV;
         }
         else if (m[13].rm_so != -1) {
-            printf("MOD\n");
             token_id = MOD;
         }
         else if (m[14].rm_so != -1) {
-            printf("EQ\n");
             token_id = EQ;
         }
         else if (m[15].rm_so != -1) {
-            printf("NEQ\n");
             token_id = NEQ;
         }
         else if (m[16].rm_so != -1) {
-            printf("LT\n");
             token_id = LT;
         }
         else if (m[17].rm_so != -1) {
-            printf("LEQ\n");
             token_id = LEQ;
         }
         else if (m[18].rm_so != -1) {
-            printf("GT\n");
             token_id = GT;
         }
         else if (m[19].rm_so != -1) {
-            printf("GEQ\n");
             token_id = GEQ;
         }
         else if (m[20].rm_so != -1) {
-            printf("IF\n");
             token_id = IF;
         }
         else if (m[21].rm_so != -1) {
-            printf("WHILE\n");
             token_id = WHILE;
         }
         else if (m[22].rm_so != -1) { 
-            printf("ID\n");
             token_id = ID;
-            s = malloc(token_len);
-            for (int i = 0; i < token_len; i++) 
-                s[i] = str[i];  // Optimize!!!!    
+            s = malloc(token_len + 1); 
+            for (int i = 0; i < token_len; i++) {
+                s[i] = (*str)[i];  // Optimize!!!
+            }
+            s[token_len] = '\0';
         }
         else if (m[23].rm_so != -1) { 
-            printf("NUM\n");
             token_id = NUM;
-            char * value_s = malloc(token_len);
+            char * value_s = malloc(token_len + 1);
             for (int i = 0; i < token_len; i++) 
-                value_s[i] = str[i];  // Optimize!!!!    
-            int value = atoi(value_s);
+                value_s[i] = (*str)[i];  // Optimize!!!!    
+            value_s[token_len] = '\0';
+            // printf("AAAAAAAAAAAAHHHHHHH\n");
+            // printf(value_s);
+            value = atoi(value_s);
+            // printf("VALUE: %d\n", value);
         }
         else if (m[24].rm_so != -1) {
-            printf("WS\n");
             token_id = WS;
         }
         *str += m[0].rm_eo - m[0].rm_so;
     }
 
+
+    // printf("VALUE: %d\n", value);
     return init_token(token_id, s, value);
+    // return NULL;
 }
 
 
 
 int main() {
-    String * s = malloc(sizeof(String));
-    TokenID * t = malloc(1000 * sizeof(TokenID));
-
     //set up regex
-    regex_t * regex;
+    regex_t regex;
     regmatch_t m[25];
-
-    
     regcomp(&regex, rules, REG_EXTENDED);
 
     char * file = "if (abs == 10) print(10000); while (list) {a[]}";
-    string_cpy(s, file, str_len(file));
-    next_token(&file, regex, m);
+    token_t * t;
+    for (int i = 0; i < 10; i++) {
+        // printf("%d    ", i);
+        // t = next_token(&file, regex, m); 
+        t = next_token(&file, regex, m); 
+        printf("%s", token_to_str(t->token_id));
+        if (t->token_id == ID) {
+            printf(": %s", t->str);
+        } else if (t->token_id == NUM) {
+            printf(": %d", t->value);
+        }
+        printf("\n");
+    }
+    
     
 
     // printf("%s\n", file);
     // for (int i = 0; i < 20; i++) {
-    //     printf("%s ", enum_token_to_str(t[i]));
+    //     printf("%s ", token_to_str(t[i]));
     // }
     printf("\n");
     printf("EXIT SUCCESS\n");

@@ -3,4 +3,9 @@ __Longterm__
 
 Scanner: 
 - Add line/column numbers for each token
-    - Probably just counting number of newline characters there are
+    - Probably just counting number of newline characters.
+- Create own scanner, don't use regex library. 
+    - Bunch of switch and if? Probably.
+    - Means I don't have to run in WSL, more work though and likely less extensible.
+    
+
