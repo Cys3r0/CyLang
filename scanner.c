@@ -66,7 +66,7 @@ char * rules =
     "|([a-zA-Z][a-zA-Z0-9]*)"
     "|([0-9]+)"
     "|([ ]+)"
-    "|([\n]+)";
+    "|(\n)";
 
 char * token_to_str(token_id_enum t) {
     switch (t) {
@@ -182,7 +182,7 @@ token_t * init_token(int token_id, int line, int col, char * str, int value) {
 }
 
 
-token_t * next_token(char ** str, regex_t regex, regmatch_t * m, file_position_t file_pos) { 
+token_t * next_token(char ** str, regex_t regex, regmatch_t * m, file_position_t * file_pos) { 
     int token_id = -1;
     char * s = NULL;
     int value = 0;
@@ -275,14 +275,14 @@ token_t * next_token(char ** str, regex_t regex, regmatch_t * m, file_position_t
         else if (m[25].rm_so != -1) {
             token_id = NEWLINE;
             file_pos->line++;
-            file_pos->line = 0;
+            file_pos->col = 1;
         }
     }
 
     token_t * t = init_token(token_id, file_pos->line, file_pos->col, s, value);
     *str += m[0].rm_eo - m[0].rm_so;
     if (token_id != NEWLINE)
-        file_pos->pos = [0].rm_eo - m[0].rm_so;
+        file_pos->col += m[0].rm_eo - m[0].rm_so;
     return t;
 }
 
@@ -296,16 +296,22 @@ int main() {
     regmatch_t m[26];
     regcomp(&regex, rules, REG_EXTENDED);
 
-    char * file = "if (abs == 10) print(10000); while (list) {a[]}";
+    char * file = "if (abs == 10) \n print(10000); while (list) {a[]}";
     token_t * t;
-    for (int i = 0; i < 10; i++) {
-        t = next_token(&file, regex, m, file_pos); 
-        printf("%s", token_to_str(t->token_id));
-        if (t->token_id == ID) {
-            printf(": %s\n", t->str);
-        } else if (t->token_id == NUM) {
-            printf(": %d\n", t->value);
-        }
+    for (int i = 0; i < 20; i++) {
+        t = next_token(&file, regex, m, &file_pos); 
+        printf("%s: ", token_to_str(t->token_id));
+        printf("line %d, col %d\n", t->line, t->col);
+        // printf("line %d, col %d\n", file_pos.line, file_pos.col);
+        // if (t->token_id == NEWLINE) 
+        //     printf("NEWLINE");
+
+        
+        // if (t->token_id == ID) {
+        //     printf(": %s\n", t->str);
+        // } else if (t->token_id == NUM) {
+        //     printf(": %d\n", t->value);
+        // }
     }
     
     printf("\nEXIT SUCCESS\n");
