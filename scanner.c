@@ -3,6 +3,10 @@
 #include <string.h>
 #include <regex.h>
 
+
+//NEXT:
+//Debug file position.
+
 //TODO: 
 //Create structs for all tokens, i.e ID struct with string, NUM with number etc.
 //Make peekToken method();
@@ -13,15 +17,27 @@
 
 typedef struct {
     int token_id;
+    int line;
+    int col;
+
     char * str;         // union for str + value (?)
     int value;
 } token_t;
+
+typedef struct {
+    int line;
+    int col;
+} file_position_t;
+
+
+
 
 typedef enum {
     ID, NUM, ASSIGN, SEMI, LPAR, RPAR,
     LWING, RWING, LBRACKET, RBRACKET,
     ADD, SUB, MUL, DIV, MOD, EQ, NEQ,
-    LT, LEQ, GT, GEQ, IF, WHILE, WS,
+    LT, LEQ, GT, GEQ, IF, WHILE, WHITESPACE,
+    NEWLINE, 
 } token_id_enum;
 
 
@@ -49,7 +65,8 @@ char * rules =
     "|(while)"
     "|([a-zA-Z][a-zA-Z0-9]*)"
     "|([0-9]+)"
-    "|([ \n]+)";
+    "|([ ]+)"
+    "|([\n]+)";
 
 char * token_to_str(token_id_enum t) {
     switch (t) {
@@ -76,12 +93,11 @@ char * token_to_str(token_id_enum t) {
         case GEQ: return "GEQ";
         case IF: return "IF";
         case WHILE: return "WHILE";
-        case WS: return "WS";
+        case WHITESPACE: return "WHITESPACE";
+        case NEWLINE: return "NEWLINE";
         default: return "NONE";
     }
 }
-
-
 
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -154,20 +170,19 @@ int str_len(char * str) {
     return i;
 }
 
-token_t * init_token(int token_id, char * str, int value) {
+token_t * init_token(int token_id, int line, int col, char * str, int value) {
     token_t * t = malloc(sizeof(token_t));
     t->token_id = token_id;
+    t->line = line;
+    t->col = col;
+
     t->str = str;
     t->value = value;
     return t;
 }
 
 
-token_t * next_token(char ** str, regex_t regex, regmatch_t * m) { // pass regex & m, regex should be initialized somewhere else, main?
-    // NEXT:
-    // Debug next_token!!!!
-    // printf("Agh");
-
+token_t * next_token(char ** str, regex_t regex, regmatch_t * m, file_position_t file_pos) { 
     int token_id = -1;
     char * s = NULL;
     int value = 0;
@@ -252,53 +267,47 @@ token_t * next_token(char ** str, regex_t regex, regmatch_t * m) { // pass regex
             for (int i = 0; i < token_len; i++) 
                 value_s[i] = (*str)[i];  // Optimize!!!!    
             value_s[token_len] = '\0';
-            // printf("AAAAAAAAAAAAHHHHHHH\n");
-            // printf(value_s);
             value = atoi(value_s);
-            // printf("VALUE: %d\n", value);
         }
         else if (m[24].rm_so != -1) {
-            token_id = WS;
+            token_id = WHITESPACE;
         }
-        *str += m[0].rm_eo - m[0].rm_so;
+        else if (m[25].rm_so != -1) {
+            token_id = NEWLINE;
+            file_pos->line++;
+            file_pos->line = 0;
+        }
     }
 
-
-    // printf("VALUE: %d\n", value);
-    return init_token(token_id, s, value);
-    // return NULL;
+    token_t * t = init_token(token_id, file_pos->line, file_pos->col, s, value);
+    *str += m[0].rm_eo - m[0].rm_so;
+    if (token_id != NEWLINE)
+        file_pos->pos = [0].rm_eo - m[0].rm_so;
+    return t;
 }
 
 
 
 int main() {
+    file_position_t file_pos = {1, 1};
+
     //set up regex
     regex_t regex;
-    regmatch_t m[25];
+    regmatch_t m[26];
     regcomp(&regex, rules, REG_EXTENDED);
 
     char * file = "if (abs == 10) print(10000); while (list) {a[]}";
     token_t * t;
     for (int i = 0; i < 10; i++) {
-        // printf("%d    ", i);
-        // t = next_token(&file, regex, m); 
-        t = next_token(&file, regex, m); 
+        t = next_token(&file, regex, m, file_pos); 
         printf("%s", token_to_str(t->token_id));
         if (t->token_id == ID) {
-            printf(": %s", t->str);
+            printf(": %s\n", t->str);
         } else if (t->token_id == NUM) {
-            printf(": %d", t->value);
+            printf(": %d\n", t->value);
         }
-        printf("\n");
     }
     
-    
-
-    // printf("%s\n", file);
-    // for (int i = 0; i < 20; i++) {
-    //     printf("%s ", token_to_str(t[i]));
-    // }
-    printf("\n");
-    printf("EXIT SUCCESS\n");
+    printf("\nEXIT SUCCESS\n");
     exit(EXIT_SUCCESS);
 }
