@@ -8,6 +8,7 @@
 //Debug file position.
 
 //TODO: 
+//Make gitignore
 //Create structs for all tokens, i.e ID struct with string, NUM with number etc.
 //Make peekToken method();
 //Create parser using peek token
