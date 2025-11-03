@@ -5,12 +5,9 @@
 
 
 //NEXT:
-//Debug file position.
+//Try to match an if (expr) { ... } clause 
 
 //TODO: 
-//Make gitignore
-//Create structs for all tokens, i.e ID struct with string, NUM with number etc.
-//Make peekToken method();
 //Create parser using peek token
 //Figure out how to parse non-exp strings
 //Figure out top-down operator precedence parsing
@@ -289,7 +286,8 @@ token_t * next_token(char ** str, regex_t regex, regmatch_t * m, file_position_t
 
 
 
-int main() {
+
+int test_tokens() {
     file_position_t file_pos = {1, 1};
 
     //set up regex
@@ -318,3 +316,97 @@ int main() {
     printf("\nEXIT SUCCESS\n");
     exit(EXIT_SUCCESS);
 }
+
+
+
+void parse_if(char ** str, regex_t regex, regmatch_t * m, file_position_t * file_pos) { 
+    //previous token should have been an IF for this to be called.
+    token_t * t;
+    t = next_token(&file, regex, m, &file_pos);
+    if (t->token_id != LPAR) {
+        printf("Incorrect token at line:%d col:%d \n", t->line, t->col);
+        exit(EXIT_FAILURE);
+    } 
+    t = next_token(&file, regex, m, &file_pos);
+    // parse expression now.
+    // CONTINUE LATER    
+}
+
+
+
+void parse_stmt() {
+    // this function needs to contain at least the entry into all forms of stmt, such as if and func_call_stmt, decl etc;
+    // We know that the next statement should be a function  (???) at least in the case of an if STMT.
+    
+
+
+}
+
+
+
+
+
+
+typedef struct {
+    expr_t * expr;
+    block_stmt_t * stmts;
+} if_stmt_t;
+
+typedef struct {
+    expr_t * expr;
+    block_stmt_t * stmts1;
+    block_stmt_t * stmts2;
+} if_else_stmt_t;
+
+typedef struct {
+
+} block_stmt_t;
+
+typedef struct {
+
+} expr_t;
+
+typedef struct {
+
+} stmt;
+
+typedef struct {
+
+} stmt;
+
+typedef struct {
+
+} stmt;
+
+typedef struct {
+
+} stmt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
