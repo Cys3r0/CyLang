@@ -5,9 +5,13 @@
 
 
 //NEXT:
-//Try to match an if (expr) { ... } clause 
+
 
 //TODO: 
+//Create a parse_expr() 
+//Create a parse_block() and parse_stmt()
+//Create a peek_token, which doesn't remove it from the list, and a consume_token which does
+//Make regex+filepos into a struct or make them global so I don't have to pass them around everywhere
 //Create parser using peek token
 //Figure out how to parse non-exp strings
 //Figure out top-down operator precedence parsing
@@ -323,29 +327,46 @@ void parse_if(char ** str, regex_t regex, regmatch_t * m, file_position_t * file
     //previous token should have been an IF for this to be called.
     token_t * t;
     t = next_token(&file, regex, m, &file_pos);
-    if (t->token_id != LPAR) {
-        printf("Incorrect token at line:%d col:%d \n", t->line, t->col);
-        exit(EXIT_FAILURE);
-    } 
+    if (t->token_id != LPAR) print_lex_error(t);
+
+    // !!! parse_expression() call !!!
+
     t = next_token(&file, regex, m, &file_pos);
-    // parse expression now.
-    // CONTINUE LATER    
+    if (t->token_id != RPAR) print_lex_error(t);
+
+    t = next_token(&file, regex, m, &file_pos);
+    if (t->token_id != LBRACKET) print_lex_error(t);
+    
+    // !!! parse_block() call !!!
+    
+    t = next_token(&file, regex, m, &file_pos);
+    if (t->token_id != RBRACKET) print_lex_error(t);
+
+    //@TODO figure out how else and else if works here
 }
 
+
+void print_lex_error(int line, int col) {
+    printf("Incorrect token at line: %d, col: %d \n", line, col);
+    exit(EXIT_FAILURE);
+}
 
 
 void parse_stmt() {
     // this function needs to contain at least the entry into all forms of stmt, such as if and func_call_stmt, decl etc;
     // We know that the next statement should be a function  (???) at least in the case of an if STMT.
     
-
-
 }
 
+// have a stmt type, expr type etc?
+// how do I handle a tree of different pointers?? 
+// I'd guess stmt, expr structs. etc
 
 
 
 
+//represent if_stmt types with a union in the block above ??????
+// block should probably just have an array of pointers just.
 
 typedef struct {
     expr_t * expr;
@@ -356,44 +377,7 @@ typedef struct {
     expr_t * expr;
     block_stmt_t * stmts1;
     block_stmt_t * stmts2;
-} if_else_stmt_t;
-
-typedef struct {
-
-} block_stmt_t;
-
-typedef struct {
-
-} expr_t;
-
-typedef struct {
-
-} stmt;
-
-typedef struct {
-
-} stmt;
-
-typedef struct {
-
-} stmt;
-
-typedef struct {
-
-} stmt;
-
-
-
-
-
-
-
-
-
-
-
-
-
+} if_else_stmt_t;       
 
 
 
