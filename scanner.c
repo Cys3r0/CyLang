@@ -10,7 +10,7 @@
 //TODO: 
 //Create a parse_expr() 
 //Create a parse_block() and parse_stmt()
-//Create a peek_token, which doesn't remove it from the list, and a consume_token which does
+//Create a peek_token, which doesn't remove it from the list, and a take_token which does
 //Make regex+filepos into a struct or make them global so I don't have to pass them around everywhere
 //Create parser using peek token
 //Figure out how to parse non-exp strings
@@ -183,8 +183,40 @@ token_t * init_token(int token_id, int line, int col, char * str, int value) {
     return t;
 }
 
+token_id_enum peak_next_token(char ** str, regex_t regex, regmatch_t * m) {
+    if (regexec(&regex, *str, 25, m, 0) == 0) {
+        if (m[1].rm_so != -1)  return SEMI;
+        else if (m[2].rm_so != -1)  return ASSIGN;
+        else if (m[3].rm_so != -1)  return LPAR;
+        else if (m[4].rm_so != -1)  return RPAR;
+        else if (m[5].rm_so != -1)  return LWING;
+        else if (m[6].rm_so != -1)  return RWING;
+        else if (m[7].rm_so != -1)  return LBRACKET;
+        else if (m[8].rm_so != -1)  return RBRACKET;
+        else if (m[9].rm_so != -1)  return ADD;
+        else if (m[10].rm_so != -1)  return SUB;
+        else if (m[11].rm_so != -1)  return MUL;
+        else if (m[12].rm_so != -1)  return DIV;
+        else if (m[13].rm_so != -1)  return MOD;
+        else if (m[14].rm_so != -1)  return EQ;
+        else if (m[15].rm_so != -1)  return NEQ;
+        else if (m[16].rm_so != -1)  return LT;
+        else if (m[17].rm_so != -1)  return LEQ;
+        else if (m[18].rm_so != -1)  return GT;
+        else if (m[19].rm_so != -1)  return GEQ;
+        else if (m[20].rm_so != -1)  return IF;
+        else if (m[21].rm_so != -1)  return WHILE;
+        else if (m[22].rm_so != -1)  return ID;
+        else if (m[23].rm_so != -1)  return NUM;
+        else if (m[24].rm_so != -1)  return WHITESPACE;
+        else if (m[25].rm_so != -1)  return NEWLINE;
+    }
+}
 
-token_t * next_token(char ** str, regex_t regex, regmatch_t * m, file_position_t * file_pos) { 
+
+
+
+token_t * take_next_token(char ** str, regex_t regex, regmatch_t * m, file_position_t * file_pos) { 
     int token_id = -1;
     char * s = NULL;
     int value = 0;
@@ -302,7 +334,7 @@ int test_tokens() {
     char * file = "if (abs == 10) \n print(10000); while (list) {a[]}";
     token_t * t;
     for (int i = 0; i < 20; i++) {
-        t = next_token(&file, regex, m, &file_pos); 
+        t = take_next_token(&file, regex, m, &file_pos); 
         printf("%s: ", token_to_str(t->token_id));
         printf("line %d, col %d\n", t->line, t->col);
         // printf("line %d, col %d\n", file_pos.line, file_pos.col);
@@ -326,20 +358,20 @@ int test_tokens() {
 void parse_if(char ** str, regex_t regex, regmatch_t * m, file_position_t * file_pos) { 
     //previous token should have been an IF for this to be called.
     token_t * t;
-    t = next_token(&file, regex, m, &file_pos);
+    t = take_next_token(&file, regex, m, &file_pos);
     if (t->token_id != LPAR) print_lex_error(t);
 
     // !!! parse_expression() call !!!
 
-    t = next_token(&file, regex, m, &file_pos);
+    t = take_next_token(&file, regex, m, &file_pos);
     if (t->token_id != RPAR) print_lex_error(t);
 
-    t = next_token(&file, regex, m, &file_pos);
+    t = take_next_token(&file, regex, m, &file_pos);
     if (t->token_id != LBRACKET) print_lex_error(t);
     
     // !!! parse_block() call !!!
     
-    t = next_token(&file, regex, m, &file_pos);
+    t = take_next_token(&file, regex, m, &file_pos);
     if (t->token_id != RBRACKET) print_lex_error(t);
 
     //@TODO figure out how else and else if works here
@@ -355,6 +387,9 @@ void print_lex_error(int line, int col) {
 void parse_stmt() {
     // this function needs to contain at least the entry into all forms of stmt, such as if and func_call_stmt, decl etc;
     // We know that the next statement should be a function  (???) at least in the case of an if STMT.
+
+
+    
     
 }
 
@@ -378,6 +413,24 @@ typedef struct {
     block_stmt_t * stmts1;
     block_stmt_t * stmts2;
 } if_else_stmt_t;       
+
+
+
+// types of stmts:
+// func call stmt
+// assignment
+// variable declaration
+// return 
+
+// types of expression: 
+// ID
+// func call()
+// binops (logical and arithmetic)
+// unary minus
+
+
+
+
 
 
 
