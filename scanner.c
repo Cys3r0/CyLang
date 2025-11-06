@@ -10,7 +10,6 @@
 //TODO: 
 //Create a parse_expr() 
 //Create a parse_block() and parse_stmt()
-//Create a peek_token, which doesn't remove it from the list, and a take_token which does
 //Make regex+filepos into a struct or make them global so I don't have to pass them around everywhere
 //Create parser using peek token
 //Figure out how to parse non-exp strings
@@ -384,13 +383,16 @@ void print_lex_error(int line, int col) {
 }
 
 
+void parse_func_decl() {
+    token_t type = take_next_token() 
+    token_t func_name = take_next_token()
+
+}
+
+
 void parse_stmt() {
     // this function needs to contain at least the entry into all forms of stmt, such as if and func_call_stmt, decl etc;
     // We know that the next statement should be a function  (???) at least in the case of an if STMT.
-
-
-    
-    
 }
 
 // have a stmt type, expr type etc?
