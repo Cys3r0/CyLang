@@ -182,7 +182,9 @@ token_t * init_token(int token_id, int line, int col, char * str, int value) {
     return t;
 }
 
-token_id_enum peak_next_token(char ** str, regex_t regex, regmatch_t * m) {
+token_id_enum peak_next_token(char ** str, regex_t regex, regmatch_t * m) { 
+    // memoize last peak, pass amount of the number of peaks forward of this one
+    // This for checking n values forward. memoize how though?
     if (regexec(&regex, *str, 25, m, 0) == 0) {
         if (m[1].rm_so != -1)  return SEMI;
         else if (m[2].rm_so != -1)  return ASSIGN;
@@ -392,17 +394,78 @@ void parse_func_decl() {
     if (peak_next_token != RPAR || peak_next_token != WHITESPACE || peak_next_token != WHITESPACE) { 
         parse_expression()
         while (peak_next_token != RPAR) {
-            take_next_token() // COMMA, oh fuck I need to add comma.
+            take_next_token(); // COMMA, oh fuck I need to add comma.
             // add a consume next token for tokens that don't create ast nodes? And maybe pass the expected node
-            parse_expression()
-        }
-        
+            parse_expression();
+        }    
     }
 
+    parse_block();
+    
+
+}
+void parse_block() {
+    take_next_token(); //LBRACKET
+    while (peak_next_token != RBRACKET) {
+        parse_stmt();
+    }
+    take_next_token(); //RBRACKET
 }
 
 
 void parse_stmt() {
+    switch (peak_next_token()) {
+        case IF:
+            parse_if();
+            break;
+        case WHILE:
+            parse_while();
+            break;
+        case FOR:
+            parse_for();
+            /* code */
+            break;
+        case RETURN:
+            parse_return()
+            /* code */
+            break;
+        case ID:
+            switch (peak_next_token()) { // this won't work due to how peak_next_token works
+                case LPAR:
+                    
+                    break;
+                case :
+                    /* code */
+                    break;
+                case :
+                    /* code */
+                    break;
+                
+                default:
+                    break;
+            }
+            parse_func_call_stmt();            
+            parse_assign();
+            parse_var_decl();
+            /* code */
+            break;
+        
+        default:
+            break;
+    }    
+
+    // types of stmts:
+    // func call stmt
+    // while
+    // for
+    // assignment
+    // variable declaration
+    // return 
+
+
+
+
+
     // this function needs to contain at least the entry into all forms of stmt, such as if and func_call_stmt, decl etc;
     // We know that the next statement should be a function  (???) at least in the case of an if STMT.
 }
@@ -428,13 +491,6 @@ typedef struct {
     block_stmt_t * stmts2;
 } if_else_stmt_t;       
 
-
-
-// types of stmts:
-// func call stmt
-// assignment
-// variable declaration
-// return 
 
 // types of expression: 
 // ID
