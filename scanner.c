@@ -386,6 +386,18 @@ void print_lex_error(int line, int col) {
 void parse_func_decl() {
     token_t type = take_next_token() 
     token_t func_name = take_next_token()
+    take_next_token() // LPAR
+
+    // probably shouldn't include newlines and whitespaces 
+    if (peak_next_token != RPAR || peak_next_token != WHITESPACE || peak_next_token != WHITESPACE) { 
+        parse_expression()
+        while (peak_next_token != RPAR) {
+            take_next_token() // COMMA, oh fuck I need to add comma.
+            // add a consume next token for tokens that don't create ast nodes? And maybe pass the expected node
+            parse_expression()
+        }
+        
+    }
 
 }
 
@@ -429,23 +441,3 @@ typedef struct {
 // func call()
 // binops (logical and arithmetic)
 // unary minus
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
