@@ -391,6 +391,7 @@ void parse_func_decl() {
     take_next_token() // LPAR
 
     // probably shouldn't include newlines and whitespaces 
+    // remember to memoize the parsed tokens somehow? or perhaps that is premature opt.
     if (peak_next_token != RPAR || peak_next_token != WHITESPACE || peak_next_token != WHITESPACE) { 
         parse_expression()
         while (peak_next_token != RPAR) {
