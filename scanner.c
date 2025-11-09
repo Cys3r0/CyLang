@@ -182,36 +182,38 @@ token_t * init_token(int token_id, int line, int col, char * str, int value) {
     return t;
 }
 
-token_id_enum peak_next_token(char ** str, regex_t regex, regmatch_t * m) { 
-    // memoize last peak, pass amount of the number of peaks forward of this one
-    // This for checking n values forward. memoize how though?
-    if (regexec(&regex, *str, 25, m, 0) == 0) {
-        if (m[1].rm_so != -1)  return SEMI;
-        else if (m[2].rm_so != -1)  return ASSIGN;
-        else if (m[3].rm_so != -1)  return LPAR;
-        else if (m[4].rm_so != -1)  return RPAR;
-        else if (m[5].rm_so != -1)  return LWING;
-        else if (m[6].rm_so != -1)  return RWING;
-        else if (m[7].rm_so != -1)  return LBRACKET;
-        else if (m[8].rm_so != -1)  return RBRACKET;
-        else if (m[9].rm_so != -1)  return ADD;
-        else if (m[10].rm_so != -1)  return SUB;
-        else if (m[11].rm_so != -1)  return MUL;
-        else if (m[12].rm_so != -1)  return DIV;
-        else if (m[13].rm_so != -1)  return MOD;
-        else if (m[14].rm_so != -1)  return EQ;
-        else if (m[15].rm_so != -1)  return NEQ;
-        else if (m[16].rm_so != -1)  return LT;
-        else if (m[17].rm_so != -1)  return LEQ;
-        else if (m[18].rm_so != -1)  return GT;
-        else if (m[19].rm_so != -1)  return GEQ;
-        else if (m[20].rm_so != -1)  return IF;
-        else if (m[21].rm_so != -1)  return WHILE;
-        else if (m[22].rm_so != -1)  return ID;
-        else if (m[23].rm_so != -1)  return NUM;
-        else if (m[24].rm_so != -1)  return WHITESPACE;
-        else if (m[25].rm_so != -1)  return NEWLINE;
+token_id_enum peak_next_token(int lookahead, char ** str, regex_t regex, regmatch_t * m) { 
+    // Inefficient, could memoize previously peeked values.
+
+    for (int i = 0; i < lookahead; i++){
+        if (regexec(&regex, *str, 25, m, 0) != 0) return -1;
     }
+
+    if (m[1].rm_so != -1)  return SEMI;
+    else if (m[2].rm_so != -1)  return ASSIGN;
+    else if (m[3].rm_so != -1)  return LPAR;
+    else if (m[4].rm_so != -1)  return RPAR;
+    else if (m[5].rm_so != -1)  return LWING;
+    else if (m[6].rm_so != -1)  return RWING;
+    else if (m[7].rm_so != -1)  return LBRACKET;
+    else if (m[8].rm_so != -1)  return RBRACKET;
+    else if (m[9].rm_so != -1)  return ADD;
+    else if (m[10].rm_so != -1)  return SUB;
+    else if (m[11].rm_so != -1)  return MUL;
+    else if (m[12].rm_so != -1)  return DIV;
+    else if (m[13].rm_so != -1)  return MOD;
+    else if (m[14].rm_so != -1)  return EQ;
+    else if (m[15].rm_so != -1)  return NEQ;
+    else if (m[16].rm_so != -1)  return LT;
+    else if (m[17].rm_so != -1)  return LEQ;
+    else if (m[18].rm_so != -1)  return GT;
+    else if (m[19].rm_so != -1)  return GEQ;
+    else if (m[20].rm_so != -1)  return IF;
+    else if (m[21].rm_so != -1)  return WHILE;
+    else if (m[22].rm_so != -1)  return ID;
+    else if (m[23].rm_so != -1)  return NUM;
+    else if (m[24].rm_so != -1)  return WHITESPACE;
+    else if (m[25].rm_so != -1)  return NEWLINE;
 }
 
 
