@@ -5,14 +5,12 @@
 
 
 //NEXT:
-
+//
 
 //TODO: 
 //Create a parse_expr() 
 //Create a parse_block() and parse_stmt()
 //Make regex+filepos into a struct or make them global so I don't have to pass them around everywhere
-//Create parser using peek token
-//Figure out how to parse non-exp strings
 //Figure out top-down operator precedence parsing
 
 
@@ -101,7 +99,6 @@ char * token_to_str(token_id_enum t) {
 }
 
 
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 typedef struct {
     char * str;
@@ -220,6 +217,8 @@ token_id_enum peak_next_token(int lookahead, char ** str, regex_t regex, regmatc
 
 
 token_t * take_next_token(char ** str, regex_t regex, regmatch_t * m, file_position_t * file_pos) { 
+    // if take_next_token() finds a whitespace or a newline, just run it again maybe
+    // that way, newlines can still be used for lexical matching.
     int token_id = -1;
     char * s = NULL;
     int value = 0;
@@ -334,6 +333,8 @@ int test_tokens() {
     regmatch_t m[26];
     regcomp(&regex, rules, REG_EXTENDED);
 
+
+
     char * file = "if (abs == 10) \n print(10000); while (list) {a[]}";
     token_t * t;
     for (int i = 0; i < 20; i++) {
@@ -359,8 +360,9 @@ int test_tokens() {
 
 
 void parse_if(char ** str, regex_t regex, regmatch_t * m, file_position_t * file_pos) { 
-    //previous token should have been an IF for this to be called.
     token_t * t;
+    t = take_next_token(&file, regex, m, &file_pos); // IF token
+
     t = take_next_token(&file, regex, m, &file_pos);
     if (t->token_id != LPAR) print_lex_error(t);
 
@@ -426,22 +428,22 @@ void parse_stmt() {
             break;
         case FOR:
             parse_for();
-            /* code */
             break;
         case RETURN:
-            parse_return()
-            /* code */
+            parse_return();
             break;
         case ID:
-            switch (peak_next_token()) { // this won't work due to how peak_next_token works
+            switch (peak_next_token(2)) { 
+                // this won't work due to how peak_next_token works
+                // and newlines/whitespaces can't be allowed if this is the strategy
                 case LPAR:
-                    
+                    parse_func_call_stmt();
                     break;
-                case :
-                    /* code */
+                case ASSIGN:
+                    parse_assign();
                     break;
-                case :
-                    /* code */
+                case ID:
+                    parse_var_decl();
                     break;
                 
                 default:
@@ -450,13 +452,13 @@ void parse_stmt() {
             parse_func_call_stmt();            
             parse_assign();
             parse_var_decl();
-            /* code */
             break;
         
         default:
             break;
     }    
 
+    
     // types of stmts:
     // func call stmt
     // while
@@ -465,10 +467,9 @@ void parse_stmt() {
     // variable declaration
     // return 
 
-
-
-
-
+    
+    
+    
     // this function needs to contain at least the entry into all forms of stmt, such as if and func_call_stmt, decl etc;
     // We know that the next statement should be a function  (???) at least in the case of an if STMT.
 }
@@ -477,11 +478,6 @@ void parse_stmt() {
 // how do I handle a tree of different pointers?? 
 // I'd guess stmt, expr structs. etc
 
-
-
-
-//represent if_stmt types with a union in the block above ??????
-// block should probably just have an array of pointers just.
 
 typedef struct {
     expr_t * expr;
@@ -494,6 +490,11 @@ typedef struct {
     block_stmt_t * stmts2;
 } if_else_stmt_t;       
 
+
+parse_expression() {
+
+
+}
 
 // types of expression: 
 // ID
