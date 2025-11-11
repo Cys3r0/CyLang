@@ -492,8 +492,28 @@ typedef struct {
 
 
 parse_expression() {
+    // IDK this whole thing should calla recursive descent thing.
+    switch (peak_next_token()) {
+        case ID:
+            if (peak_next_token() == LPAR) 
+                parse_func_call();
+            
+            //else create a new ID thing
+            
+                
 
+            break;
+        case NUM:
+            
+            break;
+        case LPAR:
+            // keep count of number of LPARs so we can know? 
 
+            break;
+
+        default:
+            break;
+    }
 }
 
 // types of expression: 
