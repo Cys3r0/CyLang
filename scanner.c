@@ -4,10 +4,12 @@
 #include <regex.h>
 
 
-//NEXT:
-//
 
 //TODO: 
+//Fix peak and take token with newlines
+//Decide on tree structure
+//Implement parse statement
+//Implement parse expressions
 //Create a parse_expr() 
 //Create a parse_block() and parse_stmt()
 //Make regex+filepos into a struct or make them global so I don't have to pass them around everywhere
