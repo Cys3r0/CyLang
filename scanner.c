@@ -492,6 +492,15 @@ typedef struct {
     block_stmt_t * stmts2;
 } if_else_stmt_t;       
 
+typedef struct {
+    bool parenthesis;
+    operator_t op;
+    expr_t * left;
+    expr_t * right;
+} bin_expr_t;
+
+
+
 
 parse_expression() {
     // IDK this whole thing should calla recursive descent thing.
@@ -501,8 +510,7 @@ parse_expression() {
                 parse_func_call();
             
             //else create a new ID thing
-            
-                
+                 
 
             break;
         case NUM:
