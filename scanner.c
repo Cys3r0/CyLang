@@ -178,7 +178,7 @@ token_t * init_token(int token_id, int line, int col, char * str, int value) {
 
     t->str = str;
     t->value = value;
-    return t;
+    return t; 
 }
 
 token_id_enum peak_next_token(int lookahead, char ** str, regex_t regex, regmatch_t * m) { 
@@ -225,7 +225,10 @@ token_t * take_next_token(char ** str, regex_t regex, regmatch_t * m, file_posit
     char * s = NULL;
     int value = 0;
 
-
+    // Either loop on newline and whitespace
+    // Or recurse, but loop is probably easier
+    // Also keep track of whitespace size 
+    // Although newline should still add new column line etc.
     if (regexec(&regex, *str, 25, m, 0) == 0) {
         int token_len = m[0].rm_eo - m[0].rm_so;
         if (m[1].rm_so != -1) { 
@@ -497,7 +500,7 @@ typedef struct {
     operator_t op;
     expr_t * left;
     expr_t * right;
-} bin_expr_t;
+} bin_op_t;
 
 
 
