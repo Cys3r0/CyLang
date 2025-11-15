@@ -219,110 +219,110 @@ token_id_enum peak_next_token(int lookahead, char ** str, regex_t regex, regmatc
 
 
 token_t * take_next_token(char ** str, regex_t regex, regmatch_t * m, file_position_t * file_pos) { 
-    // if take_next_token() finds a whitespace or a newline, just run it again maybe
-    // that way, newlines can still be used for lexical matching.
     int token_id = -1;
     char * s = NULL;
     int value = 0;
 
-    // Either loop on newline and whitespace
-    // Or recurse, but loop is probably easier
-    // Also keep track of whitespace size 
-    // Although newline should still add new column line etc.
-    if (regexec(&regex, *str, 25, m, 0) == 0) {
-        int token_len = m[0].rm_eo - m[0].rm_so;
-        if (m[1].rm_so != -1) { 
-            token_id = SEMI;
-        }
-        else if (m[2].rm_so != -1) { 
-            token_id = ASSIGN;
-        }
-        else if (m[3].rm_so != -1) { 
-            token_id = LPAR;
-        }
-        else if (m[4].rm_so != -1) { 
-            token_id = RPAR;
-        }
-        else if (m[5].rm_so != -1) { 
-            token_id = LWING;
-        }
-        else if (m[6].rm_so != -1) { 
-            token_id = RWING;
-        }
-        else if (m[7].rm_so != -1) { 
-            token_id = LBRACKET;
-        }
-        else if (m[8].rm_so != -1) { 
-            token_id = RBRACKET;
-        }
-        else if (m[9].rm_so != -1) {
-            token_id = ADD;
-        }
-        else if (m[10].rm_so != -1) {
-            token_id = SUB;
-        }
-        else if (m[11].rm_so != -1) {
-            token_id = MUL;
-        }
-        else if (m[12].rm_so != -1) {
-            token_id = DIV;
-        }
-        else if (m[13].rm_so != -1) {
-            token_id = MOD;
-        }
-        else if (m[14].rm_so != -1) {
-            token_id = EQ;
-        }
-        else if (m[15].rm_so != -1) {
-            token_id = NEQ;
-        }
-        else if (m[16].rm_so != -1) {
-            token_id = LT;
-        }
-        else if (m[17].rm_so != -1) {
-            token_id = LEQ;
-        }
-        else if (m[18].rm_so != -1) {
-            token_id = GT;
-        }
-        else if (m[19].rm_so != -1) {
-            token_id = GEQ;
-        }
-        else if (m[20].rm_so != -1) {
-            token_id = IF;
-        }
-        else if (m[21].rm_so != -1) {
-            token_id = WHILE;
-        }
-        else if (m[22].rm_so != -1) { 
-            token_id = ID;
-            s = malloc(token_len + 1); 
-            for (int i = 0; i < token_len; i++) {
-                s[i] = (*str)[i];  // Optimize!!!
-            }
-            s[token_len] = '\0';
-        }
-        else if (m[23].rm_so != -1) { 
-            token_id = NUM;
-            char * value_s = malloc(token_len + 1);
-            for (int i = 0; i < token_len; i++) 
-                value_s[i] = (*str)[i];  // Optimize!!!!    
-            value_s[token_len] = '\0';
-            value = atoi(value_s);
-        }
-        else if (m[24].rm_so != -1) {
-            token_id = WHITESPACE;
-        }
-        else if (m[25].rm_so != -1) {
-            token_id = NEWLINE;
-            file_pos->line++;
-            file_pos->col = 1;
-        }
-    }
+    int valid_token = 0;
 
+    while (valid_token) {
+        if (regexec(&regex, *str, 25, m, 0) == 0) {
+            int token_len = m[0].rm_eo - m[0].rm_so;
+            if (m[1].rm_so != -1) { 
+                token_id = SEMI;
+            }
+            else if (m[2].rm_so != -1) { 
+                token_id = ASSIGN;
+            }
+            else if (m[3].rm_so != -1) { 
+                token_id = LPAR;
+            }
+            else if (m[4].rm_so != -1) { 
+                token_id = RPAR;
+            }
+            else if (m[5].rm_so != -1) { 
+                token_id = LWING;
+            }
+            else if (m[6].rm_so != -1) { 
+                token_id = RWING;
+            }
+            else if (m[7].rm_so != -1) { 
+                token_id = LBRACKET;
+            }
+            else if (m[8].rm_so != -1) { 
+                token_id = RBRACKET;
+            }
+            else if (m[9].rm_so != -1) {
+                token_id = ADD;
+            }
+            else if (m[10].rm_so != -1) {
+                token_id = SUB;
+            }
+            else if (m[11].rm_so != -1) {
+                token_id = MUL;
+            }
+            else if (m[12].rm_so != -1) {
+                token_id = DIV;
+            }
+            else if (m[13].rm_so != -1) {
+                token_id = MOD;
+            }
+            else if (m[14].rm_so != -1) {
+                token_id = EQ;
+            }
+            else if (m[15].rm_so != -1) {
+                token_id = NEQ;
+            }
+            else if (m[16].rm_so != -1) {
+                token_id = LT;
+            }
+            else if (m[17].rm_so != -1) {
+                token_id = LEQ;
+            }
+            else if (m[18].rm_so != -1) {
+                token_id = GT;
+            }
+            else if (m[19].rm_so != -1) {
+                token_id = GEQ;
+            }
+            else if (m[20].rm_so != -1) {
+                token_id = IF;
+            }
+            else if (m[21].rm_so != -1) {
+                token_id = WHILE;
+            }
+            else if (m[22].rm_so != -1) { 
+                token_id = ID;
+                s = malloc(token_len + 1); 
+                for (int i = 0; i < token_len; i++) {
+                    s[i] = (*str)[i];  // Optimize!!!
+                }
+                s[token_len] = '\0';
+            }
+            else if (m[23].rm_so != -1) { 
+                token_id = NUM;
+                char * value_s = malloc(token_len + 1);
+                for (int i = 0; i < token_len; i++) 
+                value_s[i] = (*str)[i];  // Optimize!!!!    
+                value_s[token_len] = '\0';
+                value = atoi(value_s);
+            }
+            else if (m[24].rm_so != -1) {
+                token_id = WHITESPACE;
+                file_pos->col += m[0].rm_eo - m[0].rm_so;
+            }
+            else if (m[25].rm_so != -1) {
+                token_id = NEWLINE;
+                file_pos->line++;
+                file_pos->col = 1;
+            }
+        }
+        valid_token = token_id != WHITESPACE && token_id != NEWLINE;
+    }
+    
     token_t * t = init_token(token_id, file_pos->line, file_pos->col, s, value);
     *str += m[0].rm_eo - m[0].rm_so;
-    if (token_id != NEWLINE)
+    if (token_id != NEWLINE || token_id != WHITESPACE)
         file_pos->col += m[0].rm_eo - m[0].rm_so;
     return t;
 }
