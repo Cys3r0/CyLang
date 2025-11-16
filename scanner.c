@@ -6,6 +6,10 @@
 
 
 //TODO: 
+//Create a lexer struct which gathers regex and file_pos data. 
+//Refactor code to use lexer struct instead
+//Add EOF to end of any input string
+//add an expected parameter to take_token, handle error there
 //Decide on tree structure
 //Implement parse statement
 //Implement parse expressions
@@ -17,8 +21,10 @@
 
 
 
+
 // LATER:
 // Optimize the string
+// Include a python style "pass" keyword
 
 
 typedef struct {
@@ -38,12 +44,18 @@ typedef struct {
 
 
 
+
+
 typedef enum {
     ID, NUM, ASSIGN, SEMI, LPAR, RPAR,
     LWING, RWING, LBRACKET, RBRACKET,
     ADD, SUB, MUL, DIV, MOD, EQ, NEQ,
     LT, LEQ, GT, GEQ, IF, WHILE, WHITESPACE,
     NEWLINE, 
+
+
+
+    VOID,
 } token_id_enum;
 
 
@@ -233,7 +245,7 @@ token_id_enum peak_next_token(int lookahead, char ** str, regex_t regex, regmatc
 
 
 
-token_t * take_next_token(char ** str, regex_t regex, regmatch_t * m, file_position_t * file_pos) { 
+token_t * take_next_token(char ** str, int expected, regex_t regex, regmatch_t * m, file_position_t * file_pos) { 
     // @DEBUG
     int token_id = -1;
     char * s = NULL;
@@ -241,7 +253,7 @@ token_t * take_next_token(char ** str, regex_t regex, regmatch_t * m, file_posit
 
     int invalid_token = 0;    // As in not newline or whitespace
 
-    while (invalid_token) {
+    while (invalid_token) {     // not safe, should terminate on something or other
         if (regexec(&regex, *str, 25, m, 0) == 0) {
             int token_len = m[0].rm_eo - m[0].rm_so;
             if (m[1].rm_so != -1) { 
@@ -335,11 +347,14 @@ token_t * take_next_token(char ** str, regex_t regex, regmatch_t * m, file_posit
         }
         invalid_token = token_id == WHITESPACE || token_id == NEWLINE;
     }
+
+    if (expected != token_id && expected != VOID) {
+        // CONTINUE HERE!!
+    }
     
     token_t * t = init_token(token_id, file_pos->line, file_pos->col, s, value);
     *str += m[0].rm_eo - m[0].rm_so;
-    if (token_id != NEWLINE || token_id != WHITESPACE)
-        file_pos->col += m[0].rm_eo - m[0].rm_so;
+    file_pos->col += m[0].rm_eo - m[0].rm_so;       // recheck that this works with changes to invalid token, unit tests would be nice here
     return t;
 }
 
@@ -379,28 +394,31 @@ int test_tokens() {
 }
 
 
+void parse_assign() {
+    
+}
+
 
 void parse_if(char ** str, regex_t regex, regmatch_t * m, file_position_t * file_pos) { 
-    token_t * t;
-    t = take_next_token(&file, regex, m, &file_pos); // IF token
-
-    t = take_next_token(&file, regex, m, &file_pos);
-    if (t->token_id != LPAR) print_lex_error(t);
-
+    take_next_token(&file, regex, m, &file_pos); // IF 
+    take_next_token(&file, regex, m, &file_pos); // LPAR, should pass the expected token there I think 
+    
     // !!! parse_expression() call !!!
 
-    t = take_next_token(&file, regex, m, &file_pos);
-    if (t->token_id != RPAR) print_lex_error(t);
-
-    t = take_next_token(&file, regex, m, &file_pos);
-    if (t->token_id != LBRACKET) print_lex_error(t);
+    take_next_token(&file, regex, m, &file_pos); // RPAR
+    take_next_token(&file, regex, m, &file_pos); // LBRACKET
     
     // !!! parse_block() call !!!
     
-    t = take_next_token(&file, regex, m, &file_pos);
-    if (t->token_id != RBRACKET) print_lex_error(t);
+    take_next_token(&file, regex, m, &file_pos); // RBRACKET
+    if (peak_next_token(1, &file, regex, m) == ELSE) {
+        take_next_token(&file, regex, m, &file_pos); // ELSE
+        take_next_token(&file, regex, m, &file_pos); // LBRACKET
 
-    //@TODO figure out how else and else if works here
+        // !!! parse_block() call !!!
+
+        take_next_token(&file, regex, m, &file_pos); // RBRACKET
+    }
 }
 
 
@@ -428,7 +446,6 @@ void parse_func_decl() {
 
     parse_block();
     
-
 }
 void parse_block() {
     take_next_token(); //LBRACKET
@@ -500,6 +517,7 @@ void parse_stmt() {
 // I'd guess stmt, expr structs. etc
 
 
+// statement structs
 
 typedef struct {
     expr_t * t;
@@ -510,6 +528,10 @@ typedef struct {
     token_t * identifier;
     expr_t * expr;
 } assign_stmt_t;
+
+typedef struct {
+    void * stmts;
+} block_stmt_t;
 
 typedef struct {
     expr_t * expr;
@@ -529,6 +551,7 @@ typedef struct {
 
 
 
+// expressions
 
 typedef struct {
     bool parenthesis;
