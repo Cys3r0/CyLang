@@ -6,7 +6,6 @@
 
 
 //TODO: 
-//Fix peak and take token with newlines
 //Decide on tree structure
 //Implement parse statement
 //Implement parse expressions
@@ -14,6 +13,12 @@
 //Create a parse_block() and parse_stmt()
 //Make regex+filepos into a struct or make them global so I don't have to pass them around everywhere
 //Figure out top-down operator precedence parsing
+
+
+
+
+// LATER:
+// Optimize the string
 
 
 typedef struct {
@@ -69,8 +74,8 @@ char * rules =
     "|([ ]+)"
     "|(\n)";
 
-char * token_to_str(token_id_enum t) {
-    switch (t) {
+char * token_to_str(token_id_enum token_id) {
+    switch (token_id) {
         case ID: return "ID";
         case NUM: return "NUM";
         case ASSIGN: return "ASSIGN";
@@ -182,50 +187,61 @@ token_t * init_token(int token_id, int line, int col, char * str, int value) {
 }
 
 token_id_enum peak_next_token(int lookahead, char ** str, regex_t regex, regmatch_t * m) { 
+    // @DEBUG
+
     // Inefficient, could memoize previously peeked values.
+    // Could keep an int value of how far ahead the value has already looked (gloabl variable???)
+    // and just regex from there on?
 
-    for (int i = 0; i < lookahead; i++){
-        if (regexec(&regex, *str, 25, m, 0) != 0) return -1;
+    // Doesn't make sense that the int index is held by the calling function.
+    
+    int invalid_token = 0
+    while (invalid_token) {
+        for (int i = 0; i < lookahead; i++){
+            if (regexec(&regex, *str, 25, m, 0) != 0) return -1;
+        }
+
+        else if (m[1].rm_so != -1)   return SEMI;
+        else if (m[2].rm_so != -1)   return ASSIGN;
+        else if (m[3].rm_so != -1)   return LPAR;
+        else if (m[4].rm_so != -1)   return RPAR;
+        else if (m[5].rm_so != -1)   return LWING;
+        else if (m[6].rm_so != -1)   return RWING;
+        else if (m[7].rm_so != -1)   return LBRACKET;
+        else if (m[8].rm_so != -1)   return RBRACKET;
+        else if (m[9].rm_so != -1)   return ADD;
+        else if (m[10].rm_so != -1)  return SUB;
+        else if (m[11].rm_so != -1)  return MUL;
+        else if (m[12].rm_so != -1)  return DIV;
+        else if (m[13].rm_so != -1)  return MOD;
+        else if (m[14].rm_so != -1)  return EQ;
+        else if (m[15].rm_so != -1)  return NEQ;
+        else if (m[16].rm_so != -1)  return LT;
+        else if (m[17].rm_so != -1)  return LEQ;
+        else if (m[18].rm_so != -1)  return GT;
+        else if (m[19].rm_so != -1)  return GEQ;
+        else if (m[20].rm_so != -1)  return IF;
+        else if (m[21].rm_so != -1)  return WHILE;
+        else if (m[22].rm_so != -1)  return ID;
+        else if (m[23].rm_so != -1)  return NUM;
+        else if (m[24].rm_so != -1)  ;   // WHITESPACE
+        else if (m[25].rm_so != -1)  ;   // NEWLINE
     }
-
-    if (m[1].rm_so != -1)  return SEMI;
-    else if (m[2].rm_so != -1)  return ASSIGN;
-    else if (m[3].rm_so != -1)  return LPAR;
-    else if (m[4].rm_so != -1)  return RPAR;
-    else if (m[5].rm_so != -1)  return LWING;
-    else if (m[6].rm_so != -1)  return RWING;
-    else if (m[7].rm_so != -1)  return LBRACKET;
-    else if (m[8].rm_so != -1)  return RBRACKET;
-    else if (m[9].rm_so != -1)  return ADD;
-    else if (m[10].rm_so != -1)  return SUB;
-    else if (m[11].rm_so != -1)  return MUL;
-    else if (m[12].rm_so != -1)  return DIV;
-    else if (m[13].rm_so != -1)  return MOD;
-    else if (m[14].rm_so != -1)  return EQ;
-    else if (m[15].rm_so != -1)  return NEQ;
-    else if (m[16].rm_so != -1)  return LT;
-    else if (m[17].rm_so != -1)  return LEQ;
-    else if (m[18].rm_so != -1)  return GT;
-    else if (m[19].rm_so != -1)  return GEQ;
-    else if (m[20].rm_so != -1)  return IF;
-    else if (m[21].rm_so != -1)  return WHILE;
-    else if (m[22].rm_so != -1)  return ID;
-    else if (m[23].rm_so != -1)  return NUM;
-    else if (m[24].rm_so != -1)  return WHITESPACE;
-    else if (m[25].rm_so != -1)  return NEWLINE;
+    
 }
 
 
 
 
 token_t * take_next_token(char ** str, regex_t regex, regmatch_t * m, file_position_t * file_pos) { 
+    // @DEBUG
     int token_id = -1;
     char * s = NULL;
     int value = 0;
 
-    int valid_token = 0;
+    int invalid_token = 0;    // As in not newline or whitespace
 
-    while (valid_token) {
+    while (invalid_token) {
         if (regexec(&regex, *str, 25, m, 0) == 0) {
             int token_len = m[0].rm_eo - m[0].rm_so;
             if (m[1].rm_so != -1) { 
@@ -317,7 +333,7 @@ token_t * take_next_token(char ** str, regex_t regex, regmatch_t * m, file_posit
                 file_pos->col = 1;
             }
         }
-        valid_token = token_id != WHITESPACE && token_id != NEWLINE;
+        invalid_token = token_id == WHITESPACE || token_id == NEWLINE;
     }
     
     token_t * t = init_token(token_id, file_pos->line, file_pos->col, s, value);
@@ -484,16 +500,35 @@ void parse_stmt() {
 // I'd guess stmt, expr structs. etc
 
 
+
 typedef struct {
+    expr_t * t;
+} func_call_stmt_t;
+
+typedef struct {
+    token_t * type;
+    token_t * identifier;
     expr_t * expr;
-    block_stmt_t * stmts;
-} if_stmt_t;
+} assign_stmt_t;
 
 typedef struct {
     expr_t * expr;
-    block_stmt_t * stmts1;
-    block_stmt_t * stmts2;
-} if_else_stmt_t;       
+    block_stmt_t * stmts;
+} while_stmt_t;
+
+typedef struct {
+    expr_t * expr_if;
+    block_stmt_t * then_block;
+    block_stmt_t * else_block;      //Could be NULL
+} if_stmt_t; 
+
+typedef struct { 
+    expr_t * expr;
+} return_stmt_t; 
+
+
+
+
 
 typedef struct {
     bool parenthesis;
