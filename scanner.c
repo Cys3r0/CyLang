@@ -6,17 +6,17 @@
 
 
 //TODO: 
-//Create a lexer struct which gathers regex and file_pos data. 
-//Refactor code to use lexer struct instead
-//Add EOF to end of any input string
+//Figure out top-down operator precedence parsing
+// !!! CREATE PARSE EXPRESSION !!! (highest importance)
 //add an expected parameter to take_token, handle error there
+//add ELSE token
+//Add EOF to end of any input string
 //Decide on tree structure
 //Implement parse statement
 //Implement parse expressions
 //Create a parse_expr() 
 //Create a parse_block() and parse_stmt()
 //Make regex+filepos into a struct or make them global so I don't have to pass them around everywhere
-//Figure out top-down operator precedence parsing
 
 
 
@@ -42,6 +42,13 @@ typedef struct {
 } file_position_t;
 
 
+typedef struct {
+    regex_t regex;
+    regmatch_t * m;
+    int line;
+    int col;
+} lexer_t;
+
 
 
 
@@ -51,7 +58,7 @@ typedef enum {
     LWING, RWING, LBRACKET, RBRACKET,
     ADD, SUB, MUL, DIV, MOD, EQ, NEQ,
     LT, LEQ, GT, GEQ, IF, WHILE, WHITESPACE,
-    NEWLINE, 
+    NEWLINE, ELSE
 
 
 
@@ -131,7 +138,7 @@ void resize_string(String * s, int new_cap) {
     if (!new_s) {
         printf("Could not allocate more memory while resizing string.\n");
         exit(EXIT_FAILURE);
-    } 
+    }
 
     s->str = new_s;
     s->cap = new_cap;
@@ -187,6 +194,16 @@ int str_len(char * str) {
     return i;
 }
 
+lexer_t init_lexer(regex_t regex, regmatch_t * m, int line, int col) {
+    lexer_t lexer = malloc(sizeof(lexer_t)); 
+    lexer->regex = regex;
+    lexer->match = m;
+
+    lexer->line = line;
+    lexer->col = col;
+    return lexer
+}
+
 token_t * init_token(int token_id, int line, int col, char * str, int value) {
     token_t * t = malloc(sizeof(token_t));
     t->token_id = token_id;
@@ -198,7 +215,7 @@ token_t * init_token(int token_id, int line, int col, char * str, int value) {
     return t; 
 }
 
-token_id_enum peak_next_token(int lookahead, char ** str, regex_t regex, regmatch_t * m) { 
+token_id_enum peak_next_token(char ** str, int lookahead, lexer_t lex) { 
     // @DEBUG
 
     // Inefficient, could memoize previously peeked values.
@@ -206,55 +223,53 @@ token_id_enum peak_next_token(int lookahead, char ** str, regex_t regex, regmatc
     // and just regex from there on?
 
     // Doesn't make sense that the int index is held by the calling function.
-    
-    int invalid_token = 0
-    while (invalid_token) {
+    // keep that in the lexer_context
+        
+    while (1) {
         for (int i = 0; i < lookahead; i++){
-            if (regexec(&regex, *str, 25, m, 0) != 0) return -1;
+            if (regexec(&lex->regex, *str, 25, m, 0) != 0) return -1;
         }
 
-        else if (m[1].rm_so != -1)   return SEMI;
-        else if (m[2].rm_so != -1)   return ASSIGN;
-        else if (m[3].rm_so != -1)   return LPAR;
-        else if (m[4].rm_so != -1)   return RPAR;
-        else if (m[5].rm_so != -1)   return LWING;
-        else if (m[6].rm_so != -1)   return RWING;
-        else if (m[7].rm_so != -1)   return LBRACKET;
-        else if (m[8].rm_so != -1)   return RBRACKET;
-        else if (m[9].rm_so != -1)   return ADD;
-        else if (m[10].rm_so != -1)  return SUB;
-        else if (m[11].rm_so != -1)  return MUL;
-        else if (m[12].rm_so != -1)  return DIV;
-        else if (m[13].rm_so != -1)  return MOD;
-        else if (m[14].rm_so != -1)  return EQ;
-        else if (m[15].rm_so != -1)  return NEQ;
-        else if (m[16].rm_so != -1)  return LT;
-        else if (m[17].rm_so != -1)  return LEQ;
-        else if (m[18].rm_so != -1)  return GT;
-        else if (m[19].rm_so != -1)  return GEQ;
-        else if (m[20].rm_so != -1)  return IF;
-        else if (m[21].rm_so != -1)  return WHILE;
-        else if (m[22].rm_so != -1)  return ID;
-        else if (m[23].rm_so != -1)  return NUM;
-        else if (m[24].rm_so != -1)  ;   // WHITESPACE
-        else if (m[25].rm_so != -1)  ;   // NEWLINE
+        if (m[1].rm_so != -1)       return SEMI;
+        else if (m[2].rm_so != -1)  return ASSIGN;
+        else if (m[3].rm_so != -1)  return LPAR;
+        else if (m[4].rm_so != -1)  return RPAR;
+        else if (m[5].rm_so != -1)  return LWING;
+        else if (m[6].rm_so != -1)  return RWING;
+        else if (m[7].rm_so != -1)  return LBRACKET;
+        else if (m[8].rm_so != -1)  return RBRACKET;
+        else if (m[9].rm_so != -1)  return ADD;
+        else if (m[10].rm_so != -1) return SUB;
+        else if (m[11].rm_so != -1) return MUL;
+        else if (m[12].rm_so != -1) return DIV;
+        else if (m[13].rm_so != -1) return MOD;
+        else if (m[14].rm_so != -1) return EQ;
+        else if (m[15].rm_so != -1) return NEQ;
+        else if (m[16].rm_so != -1) return LT;
+        else if (m[17].rm_so != -1) return LEQ;
+        else if (m[18].rm_so != -1) return GT;
+        else if (m[19].rm_so != -1) return GEQ;
+        else if (m[20].rm_so != -1) return IF;
+        else if (m[21].rm_so != -1) return WHILE;
+        else if (m[22].rm_so != -1) return ID;
+        else if (m[23].rm_so != -1) return NUM;
+        else if (m[24].rm_so != -1) ;   // WHITESPACE
+        else if (m[25].rm_so != -1) ;   // NEWLINE
     }
     
 }
 
-
-
-
-token_t * take_next_token(char ** str, int expected, regex_t regex, regmatch_t * m, file_position_t * file_pos) { 
+token_t * take_next_token(char ** str, int expected, file_position_t * lexer) { 
     // @DEBUG
     int token_id = -1;
     char * s = NULL;
     int value = 0;
+    regmatch_t m = lexer->m;
 
     int invalid_token = 0;    // As in not newline or whitespace
 
     while (invalid_token) {     // not safe, should terminate on something or other
-        if (regexec(&regex, *str, 25, m, 0) == 0) {
+        if (regexec(&lexer->regex, *str, 25, m, 0) == 0) {
             int token_len = m[0].rm_eo - m[0].rm_so;
             if (m[1].rm_so != -1) { 
                 token_id = SEMI;
@@ -337,24 +352,25 @@ token_t * take_next_token(char ** str, int expected, regex_t regex, regmatch_t *
             }
             else if (m[24].rm_so != -1) {
                 token_id = WHITESPACE;
-                file_pos->col += m[0].rm_eo - m[0].rm_so;
+                lexer->col += m[0].rm_eo - m[0].rm_so;
             }
             else if (m[25].rm_so != -1) {
                 token_id = NEWLINE;
-                file_pos->line++;
-                file_pos->col = 1;
+                lexer->line++;
+                lexer->col = 1;
             }
         }
         invalid_token = token_id == WHITESPACE || token_id == NEWLINE;
     }
 
     if (expected != token_id && expected != VOID) {
-        // CONTINUE HERE!!
+        printf("Incorrect token at line: %d, col: %d \n", lex->line, lex->col);
+        exit(EXIT_FAILURE);
     }
     
-    token_t * t = init_token(token_id, file_pos->line, file_pos->col, s, value);
+    token_t * t = init_token(token_id, lexer->line, lexer->col, s, value);
     *str += m[0].rm_eo - m[0].rm_so;
-    file_pos->col += m[0].rm_eo - m[0].rm_so;       // recheck that this works with changes to invalid token, unit tests would be nice here
+    lexer->col += m[0].rm_eo - m[0].rm_so;       // recheck that this works with changes to invalid token, unit tests would be nice here
     return t;
 }
 
@@ -362,13 +378,12 @@ token_t * take_next_token(char ** str, int expected, regex_t regex, regmatch_t *
 
 
 int test_tokens() {
-    file_position_t file_pos = {1, 1};
-
     //set up regex
     regex_t regex;
     regmatch_t m[26];
     regcomp(&regex, rules, REG_EXTENDED);
 
+    lexer_t * lex = init_lexer(regex, m, 1, 1);
 
 
     char * file = "if (abs == 10) \n print(10000); while (list) {a[]}";
@@ -398,34 +413,41 @@ void parse_assign() {
     
 }
 
+void parse_var_decl(char ** str, lexer_t lexer) {
+    take_next_token(&file, ID, lexer); 
+    take_next_token(&file, ID, lexer); 
+    if (peak_next_token(&file, 1, lexer) == ASSIGN){
 
-void parse_if(char ** str, regex_t regex, regmatch_t * m, file_position_t * file_pos) { 
-    take_next_token(&file, regex, m, &file_pos); // IF 
-    take_next_token(&file, regex, m, &file_pos); // LPAR, should pass the expected token there I think 
+        take_next_token(&file, ASSIGN, lexer);
+        // !!! parse_expression() call !!!
+    }
+    take_next_token(&file, SEMI, lexer); 
+}
+
+
+void parse_if(char ** str, lexer_t lexer) { 
+    take_next_token(&file, IF, lexer); 
+    take_next_token(&file, LPAR, lexer); 
     
     // !!! parse_expression() call !!!
-
-    take_next_token(&file, regex, m, &file_pos); // RPAR
-    take_next_token(&file, regex, m, &file_pos); // LBRACKET
+    
+    take_next_token(&file, RPAR, lexer); 
+    take_next_token(&file, LBRACKET, lexer); 
     
     // !!! parse_block() call !!!
     
-    take_next_token(&file, regex, m, &file_pos); // RBRACKET
-    if (peak_next_token(1, &file, regex, m) == ELSE) {
-        take_next_token(&file, regex, m, &file_pos); // ELSE
-        take_next_token(&file, regex, m, &file_pos); // LBRACKET
+    take_next_token(&file, RBRACKET, lexer); 
+    if (peak_next_token(&file, 1, lexer) == ELSE) {
+        take_next_token(&file, ELSE, lexer); 
+        take_next_token(&file, LBRACKET, lexer);
 
         // !!! parse_block() call !!!
 
-        take_next_token(&file, regex, m, &file_pos); // RBRACKET
+        take_next_token(&file, RBRACKET, lexer); 
     }
 }
 
 
-void print_lex_error(int line, int col) {
-    printf("Incorrect token at line: %d, col: %d \n", line, col);
-    exit(EXIT_FAILURE);
-}
 
 
 void parse_func_decl() {
