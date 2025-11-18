@@ -8,13 +8,14 @@
 //TODO: 
 //Figure out top-down operator precedence parsing
 // !!! CREATE PARSE EXPRESSION !!! (highest importance)
+//make operator precedence work for + - * / first, then add the others later.
 //add an expected parameter to take_token, handle error there
-//add ELSE token
 //Add EOF to end of any input string
 //Decide on tree structure
 //Implement parse statement
 //Implement parse expressions
 //Create a parse_expr() 
+//add ELSE, EXPONENT, (LOGICAL:) NOT AND OR, (BITWISE) NOT AND OR XOR BITSHIFTS, EXPONENT, INCREMENT, DECREMENT token
 //Create a parse_block() and parse_stmt()
 //Make regex+filepos into a struct or make them global so I don't have to pass them around everywhere
 
@@ -123,6 +124,11 @@ char * token_to_str(token_id_enum token_id) {
         default: return "NONE";
     }
 }
+
+
+int precedence_table[11] = {100, 101, 200, 201, 202};
+                          //ADD, SUB, MUL, DIV, MOD
+                          //the extra increments so that we always get the same parse tree.
 
 
 
@@ -259,7 +265,7 @@ token_id_enum peak_next_token(char ** str, int lookahead, lexer_t lex) {
     
 }
 
-token_t * take_next_token(char ** str, int expected, file_position_t * lexer) { 
+token_t * take_next_token(char ** str, int expected, lexer_t * lexer) { 
     // @DEBUG
     int token_id = -1;
     char * s = NULL;
@@ -302,7 +308,7 @@ token_t * take_next_token(char ** str, int expected, file_position_t * lexer) {
                 token_id = SUB;
             }
             else if (m[11].rm_so != -1) {
-                token_id = MUL;
+                token_id = MUL; 
             }
             else if (m[12].rm_so != -1) {
                 token_id = DIV;
@@ -374,6 +380,19 @@ token_t * take_next_token(char ** str, int expected, file_position_t * lexer) {
     return t;
 }
 
+// a * b + c
+//
+// Below is what we want.
+//
+//          +
+//         / \
+//        *   c
+//       / \
+//      a   b
+
+// takes a, takes *, takes b, create *binop struct if + has higher precedence than *, set + left pointer to *. 
+// for a + b * c
+// take a, take +, b, create +binop struct, 
 
 
 
