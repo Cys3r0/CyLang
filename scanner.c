@@ -9,6 +9,7 @@
 //Figure out top-down operator precedence parsing
 // !!! CREATE PARSE EXPRESSION !!! (highest importance)
 //make operator precedence work for + - * / first, then add the others later.
+//Join file string with lexer struct
 //add an expected parameter to take_token, handle error there
 //Add EOF to end of any input string
 //Decide on tree structure
@@ -389,10 +390,34 @@ token_t * take_next_token(char ** str, int expected, lexer_t * lexer) {
 //        *   c
 //       / \
 //      a   b
-
+// 
 // takes a, takes *, takes b, create *binop struct if + has higher precedence than *, set + left pointer to *. 
 // for a + b * c
 // take a, take +, b, create +binop struct, 
+
+// in the case of a * b, we want:
+//
+//        *   
+//       / \
+//      a   b
+// 
+//
+//
+//
+
+// I feel like I need to do some research
+// How should a func call be represented/parsed?   
+// Perhaps make a prototype top-down operator precedence parser work for only IDs?
+// Decide on priorities. 
+
+
+void parse_expr(char ** file, lexer_t lex) {
+    token_t * t = take_next_token(file, NUM, lex);
+    
+    
+    
+
+}
 
 
 
