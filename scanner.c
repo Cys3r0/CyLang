@@ -411,8 +411,24 @@ token_t * take_next_token(char ** str, int expected, lexer_t * lexer) {
 // Decide on priorities. 
 
 
+bool is_binary_operator(token_t * tok) {
+    //works for now
+    return tok->token_id == ADD
+            || tok->token_id == MUL
+            || tok->token_id == SUB
+            || tok->token_id == DIV
+            || tok->token_id == MOD   
+}
+
 void parse_expr(char ** file, lexer_t lex) {
-    token_t * t = take_next_token(file, NUM, lex);
+    // to begin with, work with a * b + c, no parens.
+    token_t * current_tok = take_next_token(file, NUM, lex);
+    token_t * t2 = take_next_token(file, void, lex);
+    
+    if (is_binary_operator(peak_next_token())) { // Clean this up later.
+        
+    }
+
     
     
     
