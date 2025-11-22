@@ -218,63 +218,80 @@ token_t * init_token(int token_id, int line, int col, char * str, int value) {
     return t; 
 }
 
-int peak_next_token(char ** str, int lookahead, lexer_t * lex) { 
+int peak_next_token(int lookahead, lexer_t * lex) { 
     // @DEBUG
-
     // Inefficient, could memoize previously peeked values.
-    // Could keep an int value of how far ahead the value has already looked (gloabl variable???)
-    // and just regex from there on?
+    // Store some kind of pointer to last memoized/regexed in lexer_t.
 
-    // Doesn't make sense that the int index is held by the calling function.
-    // keep that in the lexer_context
-        
-    while (1) {
-        char * temp_str = lex->regex;
-        // hmm this function doesn't work, like at all.
-        for (int i = 0; i < lookahead; i++){
-            if (regexec(lex->regex, *str, 25, m, 0) != 0) return -1;
-        }
-
-        if (m[1].rm_so != -1)       return SEMI;
-        else if (m[2].rm_so != -1)  return ASSIGN;
-        else if (m[3].rm_so != -1)  return LPAR;
-        else if (m[4].rm_so != -1)  return RPAR;
-        else if (m[5].rm_so != -1)  return LWING;
-        else if (m[6].rm_so != -1)  return RWING;
-        else if (m[7].rm_so != -1)  return LBRACKET;
-        else if (m[8].rm_so != -1)  return RBRACKET;
-        else if (m[9].rm_so != -1)  return ADD;
-        else if (m[10].rm_so != -1) return SUB;
-        else if (m[11].rm_so != -1) return MUL;
-        else if (m[12].rm_so != -1) return DIV;
-        else if (m[13].rm_so != -1) return MOD;
-        else if (m[14].rm_so != -1) return EQ;
-        else if (m[15].rm_so != -1) return NEQ;
-        else if (m[16].rm_so != -1) return LT;
-        else if (m[17].rm_so != -1) return LEQ;
-        else if (m[18].rm_so != -1) return GT;
-        else if (m[19].rm_so != -1) return GEQ;
-        else if (m[20].rm_so != -1) return IF;
-        else if (m[21].rm_so != -1) return WHILE;
-        else if (m[22].rm_so != -1) return ID;
-        else if (m[23].rm_so != -1) return NUM;
-        else if (m[24].rm_so != -1) ;   // WHITESPACE
-        else if (m[25].rm_so != -1) ;   // NEWLINE
+    if (lookahead == 0) {
+        printf("Lookahead must be greater than 0.\n");
+        exit(EXIT_FAILURE);
     }
+        
+    char * temp_str = lex->file_text;
+    regmatch_t * m = lex->match;
+    uint valid_token_count = 0;
+    int token_id;
+
+    // id id id NUM
     
+    int count = 0;
+    // printf("Lookahead: %d\n", lookahead);
+    while (valid_token_count < lookahead) {
+        // printf("%d\n", valid_token_count);
+        if (regexec(&lex->regex, temp_str, 25, m, 0) != 0) return -1;
+        printf("Count: %d\n", count);
+        count++;
+            
+        uint valid_token = !(m[24].rm_so != -1 || m[25].rm_so != -1);
+        if (valid_token) valid_token_count++;
+
+        // if (m[24].rm_so != -1 || m[25].rm_so != -1) valid_token_count--;
+        
+        
+        temp_str += m[0].rm_eo - m[0].rm_so;
+    }
+    printf("%s\n", temp_str);
+
+    if (m[1].rm_so != -1)  return SEMI;
+    if (m[2].rm_so != -1)  return ASSIGN;
+    if (m[3].rm_so != -1)  return LPAR;
+    if (m[4].rm_so != -1)  return RPAR;
+    if (m[5].rm_so != -1)  return LWING;
+    if (m[6].rm_so != -1)  return RWING;
+    if (m[7].rm_so != -1)  return LBRACKET;
+    if (m[8].rm_so != -1)  return RBRACKET;
+    if (m[9].rm_so != -1)  return ADD;
+    if (m[10].rm_so != -1) return SUB;
+    if (m[11].rm_so != -1) return MUL;
+    if (m[12].rm_so != -1) return DIV;
+    if (m[13].rm_so != -1) return MOD;
+    if (m[14].rm_so != -1) return EQ;
+    if (m[15].rm_so != -1) return NEQ;
+    if (m[16].rm_so != -1) return LT;
+    if (m[17].rm_so != -1) return LEQ;
+    if (m[18].rm_so != -1) return GT;
+    if (m[19].rm_so != -1) return GEQ;
+    if (m[20].rm_so != -1) return IF;
+    if (m[21].rm_so != -1) return WHILE;
+    if (m[22].rm_so != -1) return ID;
+    if (m[23].rm_so != -1) return NUM;
+    // if (m[24].rm_so != -1) return WHITESPACE;
+    // if (m[25].rm_so != -1) return NEWLINE;
+    return -1;
 }
 
-token_t * take_next_token(char ** str, int expected, lexer_t * lexer) { 
+token_t * take_next_token(int expected, lexer_t * lex) { 
     // @DEBUG
     int token_id = -1;
     char * s = NULL;
     int value = 0;
-    regmatch_t m = lexer->m;
+    regmatch_t * m = lex->match;
 
     int invalid_token = 0;    // As in not newline or whitespace
 
-    while (invalid_token) {     // not safe, should terminate on something or other
-        if (regexec(&lexer->regex, *str, 25, m, 0) == 0) {
+    while (invalid_token) {     // not safe, should terminate on something or other, error_token maybe
+        if (regexec(&lex->regex, lex->file_text, 25, m, 0) == 0) {
             int token_len = m[0].rm_eo - m[0].rm_so;
             if (m[1].rm_so != -1) { 
                 token_id = SEMI;
@@ -343,7 +360,7 @@ token_t * take_next_token(char ** str, int expected, lexer_t * lexer) {
                 token_id = ID;
                 s = malloc(token_len + 1); 
                 for (int i = 0; i < token_len; i++) {
-                    s[i] = (*str)[i];  // Optimize!!!
+                    s[i] = lex->file_text[i];  // Optimize!!!
                 }
                 s[token_len] = '\0';
             }
@@ -351,18 +368,18 @@ token_t * take_next_token(char ** str, int expected, lexer_t * lexer) {
                 token_id = NUM;
                 char * value_s = malloc(token_len + 1);
                 for (int i = 0; i < token_len; i++) 
-                value_s[i] = (*str)[i];  // Optimize!!!!    
+                value_s[i] = lex->file_text[i];  // Optimize!!!!    
                 value_s[token_len] = '\0';
                 value = atoi(value_s);
             }
             else if (m[24].rm_so != -1) {
                 token_id = WHITESPACE;
-                lexer->col += m[0].rm_eo - m[0].rm_so;
+                lex->col += m[0].rm_eo - m[0].rm_so;
             }
             else if (m[25].rm_so != -1) {
                 token_id = NEWLINE;
-                lexer->line++;
-                lexer->col = 1;
+                lex->line++;
+                lex->col = 1;
             }
         }
         invalid_token = token_id == WHITESPACE || token_id == NEWLINE;
@@ -373,14 +390,14 @@ token_t * take_next_token(char ** str, int expected, lexer_t * lexer) {
         exit(EXIT_FAILURE);
     }
     
-    token_t * t = init_token(token_id, lexer->line, lexer->col, s, value);
-    *str += m[0].rm_eo - m[0].rm_so;
-    lexer->col += m[0].rm_eo - m[0].rm_so;       // recheck that this works with changes to invalid token, unit tests would be nice here
+    token_t * t = init_token(token_id, lex->line, lex->col, s, value);
+    lex->file_text += m[0].rm_eo - m[0].rm_so;
+    lex->col += m[0].rm_eo - m[0].rm_so;       // recheck that this works with changes to invalid token, unit tests would be nice here
     return t;
 }
 
 
-int test_tokens() {
+void test_tokens() {
     //set up regex
     char * file_text = "if (abs == 10) \n print(10000); while (list) {a[]}";
     regex_t regex;
@@ -410,3 +427,26 @@ int test_tokens() {
     // printf("\nEXIT SUCCESS\n");
     // exit(EXIT_SUCCESS);
 }
+
+int main()
+{
+    
+    
+    char * file_text = "if (abs == 10) print(10000); while (list) {a[]}";
+    regex_t regex;
+    regmatch_t m[26];
+    regcomp(&regex, rules, REG_EXTENDED);
+    lexer_t * lex = init_lexer(file_text, regex, m);
+    printf("%s\n", lex->file_text);
+
+
+
+    for (uint i = 1; i < 10; i++)
+    {
+        printf("%s\n", token_to_str(peak_next_token(i, lex)));
+    }
+
+
+    return 0;
+}
+
