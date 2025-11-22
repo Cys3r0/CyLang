@@ -31,6 +31,8 @@
 // Include a python style "pass" keyword
 
 
+
+
 typedef struct {
     int token_id;
     int line;
@@ -50,6 +52,7 @@ typedef struct {
 } lexer_t;
 
 
+int NUMBER_OF_TOKENS = 26;
 
 typedef enum {
     ID, NUM, ASSIGN, SEMI, LPAR, RPAR,
@@ -238,16 +241,18 @@ int peak_next_token(int lookahead, lexer_t * lex) {
     int count = 0;
     // printf("Lookahead: %d\n", lookahead);
     while (valid_token_count < lookahead) {
+        memset(m, -1, sizeof(regmatch_t) * NUMBER_OF_TOKENS);
         // printf("%d\n", valid_token_count);
-        if (regexec(&lex->regex, temp_str, 25, m, 0) != 0) return -1;
-        printf("Count: %d\n", count);
+        if (regexec(&lex->regex, temp_str, 25, m, 0) != 0) 
+            ;
+        // printf("Count: %d\n", count);
         count++;
             
         uint valid_token = !(m[24].rm_so != -1 || m[25].rm_so != -1);
         if (valid_token) valid_token_count++;
+        // printf("%d\n", valid_token_count);
 
         // if (m[24].rm_so != -1 || m[25].rm_so != -1) valid_token_count--;
-        
         
         temp_str += m[0].rm_eo - m[0].rm_so;
     }
@@ -399,7 +404,7 @@ token_t * take_next_token(int expected, lexer_t * lex) {
 
 void test_tokens() {
     //set up regex
-    char * file_text = "if (abs == 10) \n print(10000); while (list) {a[]}";
+    char * file_text = "if (abs == 10) awd       d dprint(10000); while (list) {a[]}";
     regex_t regex;
     regmatch_t m[26];
     regcomp(&regex, rules, REG_EXTENDED);
@@ -432,7 +437,7 @@ int main()
 {
     
     
-    char * file_text = "if (abs == 10) print(10000); while (list) {a[]}";
+    char * file_text = "if (abs == 10)                print(10000); while (list) {a[]}";
     regex_t regex;
     regmatch_t m[26];
     regcomp(&regex, rules, REG_EXTENDED);
