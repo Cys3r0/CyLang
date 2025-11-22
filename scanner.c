@@ -6,6 +6,8 @@
 
 
 //TODO: 
+//Priority is to make sure that scanner.c actually works as intended
+//Fix the broken peak_next_token
 //Figure out top-down operator precedence parsing
 // !!! CREATE PARSE EXPRESSION !!! (highest importance)
 //make operator precedence work for + - * / first, then add the others later.
@@ -38,20 +40,14 @@ typedef struct {
     int value;
 } token_t;
 
-typedef struct {
-    int line;
-    int col;
-} file_position_t;
-
 
 typedef struct {
+    char * file_text;
     regex_t regex;
-    regmatch_t * m;
+    regmatch_t * match;
     int line;
     int col;
 } lexer_t;
-
-
 
 
 
@@ -60,8 +56,7 @@ typedef enum {
     LWING, RWING, LBRACKET, RBRACKET,
     ADD, SUB, MUL, DIV, MOD, EQ, NEQ,
     LT, LEQ, GT, GEQ, IF, WHILE, WHITESPACE,
-    NEWLINE, ELSE
-
+    NEWLINE, ELSE,
 
 
     VOID,
@@ -201,14 +196,15 @@ int str_len(char * str) {
     return i;
 }
 
-lexer_t init_lexer(regex_t regex, regmatch_t * m, int line, int col) {
-    lexer_t lexer = malloc(sizeof(lexer_t)); 
+lexer_t * init_lexer(char * file_text, regex_t regex, regmatch_t * m) {
+    lexer_t * lexer = malloc(sizeof(lexer_t)); 
+    lexer->file_text = file_text;
     lexer->regex = regex;
     lexer->match = m;
 
-    lexer->line = line;
-    lexer->col = col;
-    return lexer
+    lexer->line = 1;
+    lexer->col = 1;
+    return lexer;
 }
 
 token_t * init_token(int token_id, int line, int col, char * str, int value) {
@@ -222,7 +218,7 @@ token_t * init_token(int token_id, int line, int col, char * str, int value) {
     return t; 
 }
 
-token_id_enum peak_next_token(char ** str, int lookahead, lexer_t lex) { 
+int peak_next_token(char ** str, int lookahead, lexer_t * lex) { 
     // @DEBUG
 
     // Inefficient, could memoize previously peeked values.
@@ -233,8 +229,10 @@ token_id_enum peak_next_token(char ** str, int lookahead, lexer_t lex) {
     // keep that in the lexer_context
         
     while (1) {
+        char * temp_str = lex->regex;
+        // hmm this function doesn't work, like at all.
         for (int i = 0; i < lookahead; i++){
-            if (regexec(&lex->regex, *str, 25, m, 0) != 0) return -1;
+            if (regexec(lex->regex, *str, 25, m, 0) != 0) return -1;
         }
 
         if (m[1].rm_so != -1)       return SEMI;
@@ -381,296 +379,34 @@ token_t * take_next_token(char ** str, int expected, lexer_t * lexer) {
     return t;
 }
 
-// a * b + c
-//
-// Below is what we want.
-//
-//          +
-//         / \
-//        *   c
-//       / \
-//      a   b
-// 
-// takes a, takes *, takes b, create *binop struct if + has higher precedence than *, set + left pointer to *. 
-// for a + b * c
-// take a, take +, b, create +binop struct, 
-
-// in the case of a * b, we want:
-//
-//        *   
-//       / \
-//      a   b
-// 
-//
-//
-//
-
-// I feel like I need to do some research
-// How should a func call be represented/parsed?   
-// Perhaps make a prototype top-down operator precedence parser work for only IDs?
-// Decide on priorities. 
-
-
-bool is_binary_operator(token_t * tok) {
-    //works for now
-    return tok->token_id == ADD
-            || tok->token_id == MUL
-            || tok->token_id == SUB
-            || tok->token_id == DIV
-            || tok->token_id == MOD   
-}
-
-void parse_expr(char ** file, lexer_t lex) {
-    // to begin with, work with a * b + c, no parens.
-    token_t * current_tok = take_next_token(file, NUM, lex);
-    token_t * t2 = take_next_token(file, void, lex);
-    
-    if (is_binary_operator(peak_next_token())) { // Clean this up later.
-        
-    }
-
-    
-    
-    
-
-}
-
-
 
 int test_tokens() {
     //set up regex
+    char * file_text = "if (abs == 10) \n print(10000); while (list) {a[]}";
     regex_t regex;
     regmatch_t m[26];
     regcomp(&regex, rules, REG_EXTENDED);
 
-    lexer_t * lex = init_lexer(regex, m, 1, 1);
+    lexer_t * lex = init_lexer(file_text, regex, m);
 
 
-    char * file = "if (abs == 10) \n print(10000); while (list) {a[]}";
-    token_t * t;
-    for (int i = 0; i < 20; i++) {
-        t = take_next_token(&file, regex, m, &file_pos); 
-        printf("%s: ", token_to_str(t->token_id));
-        printf("line %d, col %d\n", t->line, t->col);
-        // printf("line %d, col %d\n", file_pos.line, file_pos.col);
-        // if (t->token_id == NEWLINE) 
-        //     printf("NEWLINE");
+    // token_t * t;
+    // for (int i = 0; i < 20; i++) {
+    //     t = take_next_token(&file, regex, m, &file_pos); 
+    //     printf("%s: ", token_to_str(t->token_id));
+    //     printf("line %d, col %d\n", t->line, t->col);
+    //     // printf("line %d, col %d\n", file_pos.line, file_pos.col);
+    //     // if (t->token_id == NEWLINE) 
+    //     //     printf("NEWLINE");
 
         
-        // if (t->token_id == ID) {
-        //     printf(": %s\n", t->str);
-        // } else if (t->token_id == NUM) {
-        //     printf(": %d\n", t->value);
-        // }
-    }
+    //     // if (t->token_id == ID) {
+    //     //     printf(": %s\n", t->str);
+    //     // } else if (t->token_id == NUM) {
+    //     //     printf(": %d\n", t->value);
+    //     // }
+    // }
     
-    printf("\nEXIT SUCCESS\n");
-    exit(EXIT_SUCCESS);
+    // printf("\nEXIT SUCCESS\n");
+    // exit(EXIT_SUCCESS);
 }
-
-
-void parse_assign() {
-    
-}
-
-void parse_var_decl(char ** str, lexer_t lexer) {
-    take_next_token(&file, ID, lexer); 
-    take_next_token(&file, ID, lexer); 
-    if (peak_next_token(&file, 1, lexer) == ASSIGN){
-
-        take_next_token(&file, ASSIGN, lexer);
-        // !!! parse_expression() call !!!
-    }
-    take_next_token(&file, SEMI, lexer); 
-}
-
-
-void parse_if(char ** str, lexer_t lexer) { 
-    take_next_token(&file, IF, lexer); 
-    take_next_token(&file, LPAR, lexer); 
-    
-    // !!! parse_expression() call !!!
-    
-    take_next_token(&file, RPAR, lexer); 
-    take_next_token(&file, LBRACKET, lexer); 
-    
-    // !!! parse_block() call !!!
-    
-    take_next_token(&file, RBRACKET, lexer); 
-    if (peak_next_token(&file, 1, lexer) == ELSE) {
-        take_next_token(&file, ELSE, lexer); 
-        take_next_token(&file, LBRACKET, lexer);
-
-        // !!! parse_block() call !!!
-
-        take_next_token(&file, RBRACKET, lexer); 
-    }
-}
-
-
-
-
-void parse_func_decl() {
-    token_t type = take_next_token() 
-    token_t func_name = take_next_token()
-    take_next_token() // LPAR
-
-    // probably shouldn't include newlines and whitespaces 
-    // remember to memoize the parsed tokens somehow? or perhaps that is premature opt.
-    if (peak_next_token != RPAR || peak_next_token != WHITESPACE || peak_next_token != WHITESPACE) { 
-        parse_expression()
-        while (peak_next_token != RPAR) {
-            take_next_token(); // COMMA, oh fuck I need to add comma.
-            // add a consume next token for tokens that don't create ast nodes? And maybe pass the expected node
-            parse_expression();
-        }    
-    }
-
-    parse_block();
-    
-}
-void parse_block() {
-    take_next_token(); //LBRACKET
-    while (peak_next_token != RBRACKET) {
-        parse_stmt();
-    }
-    take_next_token(); //RBRACKET
-}
-
-
-void parse_stmt() {
-    switch (peak_next_token()) {
-        case IF:
-            parse_if();
-            break;
-        case WHILE:
-            parse_while();
-            break;
-        case FOR:
-            parse_for();
-            break;
-        case RETURN:
-            parse_return();
-            break;
-        case ID:
-            switch (peak_next_token(2)) { 
-                // this won't work due to how peak_next_token works
-                // and newlines/whitespaces can't be allowed if this is the strategy
-                case LPAR:
-                    parse_func_call_stmt();
-                    break;
-                case ASSIGN:
-                    parse_assign();
-                    break;
-                case ID:
-                    parse_var_decl();
-                    break;
-                
-                default:
-                    break;
-            }
-            parse_func_call_stmt();            
-            parse_assign();
-            parse_var_decl();
-            break;
-        
-        default:
-            break;
-    }    
-
-    
-    // types of stmts:
-    // func call stmt
-    // while
-    // for
-    // assignment
-    // variable declaration
-    // return 
-
-    
-    
-    
-    // this function needs to contain at least the entry into all forms of stmt, such as if and func_call_stmt, decl etc;
-    // We know that the next statement should be a function  (???) at least in the case of an if STMT.
-}
-
-// have a stmt type, expr type etc?
-// how do I handle a tree of different pointers?? 
-// I'd guess stmt, expr structs. etc
-
-
-// statement structs
-
-typedef struct {
-    expr_t * t;
-} func_call_stmt_t;
-
-typedef struct {
-    token_t * type;
-    token_t * identifier;
-    expr_t * expr;
-} assign_stmt_t;
-
-typedef struct {
-    void * stmts;
-} block_stmt_t;
-
-typedef struct {
-    expr_t * expr;
-    block_stmt_t * stmts;
-} while_stmt_t;
-
-typedef struct {
-    expr_t * expr_if;
-    block_stmt_t * then_block;
-    block_stmt_t * else_block;      //Could be NULL
-} if_stmt_t; 
-
-typedef struct { 
-    expr_t * expr;
-} return_stmt_t; 
-
-
-
-
-// expressions
-
-typedef struct {
-    bool parenthesis;
-    operator_t op;
-    expr_t * left;
-    expr_t * right;
-} bin_op_t;
-
-
-
-
-parse_expression() {
-    // IDK this whole thing should calla recursive descent thing.
-    switch (peak_next_token()) {
-        case ID:
-            if (peak_next_token() == LPAR) 
-                parse_func_call();
-            
-            //else create a new ID thing
-                 
-
-            break;
-        case NUM:
-            
-            break;
-        case LPAR:
-            // keep count of number of LPARs so we can know? 
-
-            break;
-
-        default:
-            break;
-    }
-}
-
-// types of expression: 
-// ID
-// func call()
-// binops (logical and arithmetic)
-// unary minus
