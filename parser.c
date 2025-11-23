@@ -1,16 +1,6 @@
 #include <scanner.h> // error is due to regex.h wsl thing
 
 
-
-
-
-
-
-
-
-
-
-
 // a * b + c
 //
 // Below is what we want.
@@ -31,17 +21,13 @@
 //       / \
 //      a   b
 // 
-//
-//
-//
-
 // I feel like I need to do some research
 // How should a func call be represented/parsed?   
 // Perhaps make a prototype top-down operator precedence parser work for only IDs?
 // Decide on priorities. 
 
 
-u8 is_binary_operator(token_t * tok) {
+int is_binary_operator(token_t * tok) {
     //works for now
     return tok->token_id == ADD
             || tok->token_id == MUL
@@ -51,10 +37,22 @@ u8 is_binary_operator(token_t * tok) {
 }
 
 
+typedef struct {
+    bool parenthesis;
+    int op;
+    expr_t * left;
+    expr_t * right;
+} bin_op_t;
+
+
+
 void parse_expr(char ** file, lexer_t lex) {
     // to begin with, work with a * b + c, no parens.
-    token_t * current_tok = take_next_token(file, NUM, lex);
-    token_t * t2 = take_next_token(file, void, lex);
+    token_t * val;
+    token_t * op;
+    if (!(val = )) 
+    token_t * current_tok = take_next_token(lex);
+    token_t * t2 = take_next_token(lex);
     
     if (is_binary_operator(peak_next_token())) { // Clean this up later.
         
@@ -154,8 +152,6 @@ void parse_stmt() {
             break;
         case ID:
             switch (peak_next_token(2)) { 
-                // this won't work due to how peak_next_token works
-                // and newlines/whitespaces can't be allowed if this is the strategy
                 case LPAR:
                     parse_func_call_stmt();
                     break;

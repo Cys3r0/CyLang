@@ -6,21 +6,11 @@
 
 
 //TODO: 
-//Priority is to make sure that scanner.c actually works as intended
-//Fix broken take_next_token. Should be the same as take prev token.
 //Figure out top-down operator precedence parsing
 // !!! CREATE PARSE EXPRESSION !!! (highest importance)
 //make operator precedence work for + - * / first, then add the others later.
-//Join file string with lexer struct
-//add an expected parameter to take_token, handle error there
-//Add EOF to end of any input string
-//Decide on tree structure
-//Implement parse statement
-//Implement parse expressions
-//Create a parse_expr() 
-//add ELSE, EXPONENT, (LOGICAL:) NOT AND OR, (BITWISE) NOT AND OR XOR BITSHIFTS, EXPONENT, INCREMENT, DECREMENT token
-//Create a parse_block() and parse_stmt()
-//Make regex+filepos into a struct or make them global so I don't have to pass them around everywhere
+//add ELSE, EXPONENT, (LOGICAL) NOT AND OR, (BITWISE) NOT AND OR XOR BITSHIFTS, EXPONENT, INCREMENT, DECREMENT token
+//Create EOF-token at end of file
 
 
 // LATER:
@@ -220,7 +210,7 @@ token_t * init_token(int token_id, int line, int col, char * str, int value) {
     return t; 
 }
 
-int peak_next_token(int lookahead, lexer_t * lex) { 
+int peak_token(int lookahead, lexer_t * lex) { 
     // @DEBUG
     // Inefficient, could memoize previously peeked values.
     // Store some kind of pointer to last memoized/regexed in lexer_t.
@@ -275,7 +265,7 @@ int peak_next_token(int lookahead, lexer_t * lex) {
     return -1;
 }
 
-token_t * take_next_token(lexer_t * lex) { 
+token_t * take_token(lexer_t * lex) { 
     // @DEBUG
     int token_id = -1;
     char * s;
@@ -403,38 +393,6 @@ token_t * take_next_token(lexer_t * lex) {
 
 
 void test_tokens() {
-    //set up regex
-    char * file_text = "if (abs == 10) awd       d dprint(10000); while (list) {a[]}";
-    regex_t regex;
-    regmatch_t m[26];
-    regcomp(&regex, rules, REG_EXTENDED);
-
-    lexer_t * lex = init_lexer(file_text, regex, m);
-
-
-    // token_t * t;
-    // for (int i = 0; i < 20; i++) {
-    //     t = take_next_token(&file, regex, m, &file_pos); 
-    //     printf("%s: ", token_to_str(t->token_id));
-    //     printf("line %d, col %d\n", t->line, t->col);
-    //     // printf("line %d, col %d\n", file_pos.line, file_pos.col);
-    //     // if (t->token_id == NEWLINE) 
-    //     //     printf("NEWLINE");
-
-        
-    //     // if (t->token_id == ID) {
-    //     //     printf(": %s\n", t->str);
-    //     // } else if (t->token_id == NUM) {
-    //     //     printf(": %d\n", t->value);
-    //     // }
-    // }
-    
-    // printf("\nEXIT SUCCESS\n");
-    // exit(EXIT_SUCCESS);
-}
-
-int main()
-{    
     char * file_text = "if (abs == 10)                print(10000); while (list) {a[]}";
     regex_t regex;
     regmatch_t m[26];
@@ -443,9 +401,8 @@ int main()
     printf("%s\n", lex->file_text);
 
 
-
-    for (uint i = 1; i < 30; i++) {
-        token_t * t = take_next_token(lex);
+    for (uint i = 1; i < 20; i++) {
+        token_t * t = take_token(lex);
         if (t->token_id == NUM){
             printf("%s: ", token_to_str(NUM));
             printf("%d\n", t->value);
@@ -456,8 +413,9 @@ int main()
             printf("%s\n", token_to_str(t->token_id));
         }
     }
+}
 
-
-    return 0;
+int main() {
+    return 0;    
 }
 
