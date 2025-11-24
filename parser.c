@@ -27,14 +27,39 @@
 // Decide on priorities. 
 
 
-int is_binary_operator(token_t * tok) {
+int is_binary_operator(int token_id) {
     //works for now
-    return tok->token_id == ADD
-            || tok->token_id == MUL
-            || tok->token_id == SUB
-            || tok->token_id == DIV
-            || tok->token_id == MOD   
+    return token_id == ADD
+            || token_id == MUL
+            || token_id == SUB
+            || token_id == DIV
+            || token_id == MOD;
 }
+
+int precedence_of(int token_id) {
+    switch (token_id){
+        case ADD:
+            return 1;
+            break;
+        case SUB:
+            return 1;
+            break;
+        case MUL:
+            return 2;
+            break;
+        case DIV:
+            return 2;
+            break;
+        case MOD:
+            return 2;
+            break;
+        
+        default:
+            return -1;
+    }
+    
+}
+
 
 
 typedef struct {
@@ -46,23 +71,33 @@ typedef struct {
 
 
 
-void parse_expr(char ** file, lexer_t lex) {
-    // to begin with, work with a * b + c, no parens.
-    token_t * val;
-    token_t * op;
-    if (!(val = )) 
-    token_t * current_tok = take_next_token(lex);
-    token_t * t2 = take_next_token(lex);
-    
-    if (is_binary_operator(peak_next_token())) { // Clean this up later.
-        
-    }
-
-    
-    
-    
-
+void parse_expr(lexer_t lex) {
+    return parse_expr_recursive(next_token(lex), 0, lex);
 }
+
+// need to make a table for precedence
+
+void parse_expr_recursive(token_t lhs, int precedence, lexer_t lex) {
+    //from wikipedia pseudocode
+    int lookahead = peak_token(1, lex);
+    while (is_binary_operator(lookahead)) { // Clean this up later.
+        int op = take_token(lex)->token_id; 
+        token_t rhs = take_token(lex);
+        lookahead = peak_token();
+        int recurse = is_binary_operator(lookahead) && precedence_of(lookahead) > precedence;
+        // "or a right-associative operator whose precedence is equal to op's."
+        // in this case we also need to increment the precedence of op passed into the recusrion 
+
+        while (recurse) {
+            rhs = parse_expr_recursive(rhs, precedence_of(op));
+        }
+        // lhs = result of applying op with operands lhs and rhs
+    }
+    // return lhs
+}
+
+    
+    
 
 
 

@@ -37,9 +37,9 @@ lexer_t init_lexer(regex_t regex, regmatch_t * m, int line, int col);
 
 token_t * init_token(int token_id, int line, int col, char * str, int value);
 
-int peak_token(char ** str, int lookahead, lexer_t lex);
+int peak_token(int lookahead, lexer_t lex);
 
-token_t * take_token(char ** str, int expected, lexer_t * lexer);
+token_t * take_token(lexer_t * lexer);
 
 
 
