@@ -75,7 +75,12 @@ void parse_expr(lexer_t lex) {
     return parse_expr_recursive(next_token(lex), 0, lex);
 }
 
-// need to make a table for precedence
+//TODO: 
+//create objects in pseudocode for binops 
+//test for simple arithmetic
+//add right-associative operations
+//add parentheses
+//add unary ops
 
 void parse_expr_recursive(token_t lhs, int precedence, lexer_t lex) {
     //from wikipedia pseudocode
@@ -96,7 +101,6 @@ void parse_expr_recursive(token_t lhs, int precedence, lexer_t lex) {
     // return lhs
 }
 
-    
     
 
 
