@@ -38,67 +38,91 @@ int is_binary_operator(int token_id) {
 
 int precedence_of(int token_id) {
     switch (token_id){
-        case ADD:
-            return 1;
-            break;
-        case SUB:
-            return 1;
-            break;
-        case MUL:
-            return 2;
-            break;
-        case DIV:
-            return 2;
-            break;
-        case MOD:
-            return 2;
-            break;
-        
-        default:
-            return -1;
+        case ADD: return 1;
+        case SUB: return 1;
+        case MUL: return 2;
+        case DIV: return 2;
+        case MOD: return 2;
+        default: return -1;
     }
     
 }
 
 
 
+
+
+
+
+enum ExprType { BINOP, ATOM };
+
 typedef struct {
-    bool parenthesis;
+    enum ExprType tag;
+    union {
+        binop_t binop;
+        token_t token;
+    } data;
+} expr_t;
+
+typedef struct {
     int op;
-    expr_t * left;
+    expr_t * left; 
     expr_t * right;
-} bin_op_t;
-
-
-
-void parse_expr(lexer_t lex) {
-    return parse_expr_recursive(next_token(lex), 0, lex);
-}
+} binop_t;
 
 //TODO: 
-//create objects in pseudocode for binops 
 //test for simple arithmetic
 //add right-associative operations
 //add parentheses
 //add unary ops
 
-void parse_expr_recursive(token_t lhs, int precedence, lexer_t lex) {
-    //from wikipedia pseudocode
+expr_t * create_binop_expr(int op, expr_t left, expr_t right) {
+    binop_t bin;
+    bin.op = op;
+    bin.left = left;
+    bin.right = right;
+    
+    expr_t * exp = malloc(sizeof(expr_t));
+    exp->tag = BINOP;
+    exp->data.binop = bin;
+    return exp;
+}
+
+
+expr_t * create_atom_expr(token_t * tok) {
+    expr_t * exp = malloc(sizeof(expr_t));
+    exp->tag = ATOM;
+    exp->data.tok = *tok;
+    return exp;
+}
+
+
+void parse_expr(lexer_t lex) {
+    return parse_expr_recursive(create_atom_expr(next_token(lex)), 0, lex);
+}
+
+
+void parse_expr_recursive(expr_t * lhs, int precedence, lexer_t lex) {
+    //pratt parsing pseudocode from wikipedia
     int lookahead = peak_token(1, lex);
-    while (is_binary_operator(lookahead)) { // Clean this up later.
+    while (is_binary_operator(lookahead) && precedence_of(lookahead) > precedence) { // Clean this up later.
         int op = take_token(lex)->token_id; 
-        token_t rhs = take_token(lex);
-        lookahead = peak_token();
+        expr_t * rhs = create_atom_expr(take_token(lex)); // ?check if next_token is numeral?
+
+        lookahead = peak_token(1, lex);
         int recurse = is_binary_operator(lookahead) && precedence_of(lookahead) > precedence;
-        // "or a right-associative operator whose precedence is equal to op's."
+        // "or a right-associative operator whose precedence is equal to op's." 
         // in this case we also need to increment the precedence of op passed into the recusrion 
+
+        // if recurse == false, and new lookahead is binop and <= precedence, we will while loop 
 
         while (recurse) {
             rhs = parse_expr_recursive(rhs, precedence_of(op));
         }
-        // lhs = result of applying op with operands lhs and rhs
+
+        lhs = create_binop_expr(op, lhs, rhs);
     }
-    // return lhs
+    return lhs;
 }
 
     
