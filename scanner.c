@@ -51,7 +51,7 @@ typedef enum {
 } token_id_enum;
 
 
-char * rules = 
+const char * rules = 
     "(;)"
     "|(=)"
     "|(\\()"
@@ -352,7 +352,7 @@ void test_tokens() {
     }
 }
 
-int main() {
-    return 0;    
-}
+// int main() {
+//     return 0;    
+// }
 
