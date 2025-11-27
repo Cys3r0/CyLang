@@ -34,6 +34,7 @@ typedef struct {
 extern const char * rules;
 
 
+char * token_to_str(token_id_enum token_id);
 
 
 

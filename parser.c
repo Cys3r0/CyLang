@@ -30,11 +30,13 @@
 
 int is_binary_operator(int token_id) {
     //works for now
-    return token_id == ADD
+    int ret = token_id == ADD
             || token_id == MUL
             || token_id == SUB
             || token_id == DIV
             || token_id == MOD;
+    printf("is_binary_operator: %d\n", ret);
+    return ret;
 }
 
 int precedence_of(int token_id) {
@@ -59,6 +61,7 @@ typedef struct {
     expr_t * right;
 } binop_t;
 
+
 struct expr {
     enum ExprType tag;
     union {
@@ -69,6 +72,7 @@ struct expr {
 
 
 //TODO: 
+//Create pretty print expr function.
 //test for simple arithmetic
 //add right-associative operations
 //add parentheses
@@ -77,6 +81,14 @@ struct expr {
 //HERE FIX LOOKAHEAD FOR LEXER
 //Create stmt tagged union?
 //fix parse statement 
+
+char * tag_to_str(enum ExprType tag) {
+    switch (tag) {
+    case ATOM: return "ATOM";
+    case BINOP: return "BINOP";
+    default: return "ERROR: NOT ATOM OR BINOP";
+    }
+}
 
 expr_t * create_binop_expr(int op, expr_t * left, expr_t * right) {
     binop_t bin;
@@ -99,24 +111,31 @@ expr_t * create_atom_expr(token_t * tok) {
 }
 
 
-expr_t * parse_expr_recursive(expr_t * lhs, int precedence, lexer_t * lex) {
+expr_t * parse_expr_recursive(expr_t * lhs, int precedence, lexer_t * lex, int * lookahead, int count) {
+    count++;
+    printf("Count: %d\n", count);
     //pratt parsing pseudocode from wikipedia
-    int lookahead = peak_token(1, lex);
+    *lookahead = peak_token(1, lex);
+    printf("%s\n", token_to_str(*lookahead));
     // while loop to continue 
-    while (is_binary_operator(lookahead) && precedence_of(lookahead) > precedence) { // Clean this up later.
+    while (is_binary_operator(*lookahead) && precedence_of(*lookahead) > precedence) { // Clean this up later.
 
         int op = take_token(lex)->token_id; 
         expr_t * rhs = create_atom_expr(take_token(lex)); // ?check if take_token is numeral?
 
-        lookahead = peak_token(1, lex);
-        int recurse = is_binary_operator(lookahead) && precedence_of(lookahead) > precedence;
+        *lookahead = peak_token(1, lex);
+        precedence = precedence_of(*lookahead);
+        // printf("%d\n", precedence);        
+        // printf("%d\n", precedence);
         // "or a right-associative operator whose precedence is equal to op's." 
-        // in this case we also need to increment the precedence of op passed into the recusrion 
+        // in this case we also need to increment the precedence of op passed into the recursion
 
-        // if recurse == false, and new lookahead is binop and <= precedence, we will while loop 
 
-        while (recurse) {
-            rhs = parse_expr_recursive(rhs, precedence_of(op), lex);
+        while (is_binary_operator(*lookahead) && precedence_of(*lookahead) > precedence) {
+            printf("Has recursed\n");
+            rhs = parse_expr_recursive(rhs, precedence_of(op), lex, lookahead, count);
+            printf("RHS within recur: %s\n", tag_to_str(rhs->tag));
+            printf("Finished recursion\n");
         }
 
         lhs = create_binop_expr(op, lhs, rhs);
@@ -125,7 +144,8 @@ expr_t * parse_expr_recursive(expr_t * lhs, int precedence, lexer_t * lex) {
 }
 
 expr_t * parse_expr(lexer_t * lex) {
-    return parse_expr_recursive(create_atom_expr(take_token(lex)), 0, lex);
+    int lookahead;
+    return parse_expr_recursive(create_atom_expr(take_token(lex)), 0, lex, &lookahead, 0);
 }
 
 
@@ -134,7 +154,7 @@ expr_t * parse_expr(lexer_t * lex) {
 
 int main(int argc, char const *argv[])
 {
-    char * file_text = "10 + 2 * 3";
+    char * file_text = "10 + 2 + 3;";
     regex_t regex;
     regmatch_t m[26];
     regcomp(&regex, rules, REG_EXTENDED);
@@ -142,12 +162,26 @@ int main(int argc, char const *argv[])
     printf("%s\n", lex->file_text);
 
     expr_t * e = parse_expr(lex);
+    int cond = 1;
+    if (e->tag == ATOM) {
+        printf("ATOM\n");
+    } else if (e->tag == BINOP) {
+        printf("BINOP\n");
+    }
     
 
     return 0;
 }
 
+void print_expr(expr_t * expr) {
+    if (expr->tag == ATOM) {
+        // expr->data.token->token
+        print(expr->data.token->token)
+    }
 
+
+
+}
 
 
 

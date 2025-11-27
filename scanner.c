@@ -174,7 +174,6 @@ int peak_token(int lookahead, lexer_t * lex) {
 
         temp_str += m[0].rm_eo - m[0].rm_so;
     }
-    printf("%s\n", temp_str);
 
     if (m[1].rm_so != -1)  return SEMI;
     if (m[2].rm_so != -1)  return ASSIGN;
