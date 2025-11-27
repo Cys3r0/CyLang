@@ -61,7 +61,6 @@ typedef struct {
     expr_t * right;
 } binop_t;
 
-
 struct expr {
     enum ExprType tag;
     union {
@@ -111,27 +110,26 @@ expr_t * create_atom_expr(token_t * tok) {
 }
 
 
-expr_t * parse_expr_recursive(expr_t * lhs, int precedence, lexer_t * lex, int * lookahead, int count) {
+expr_t * parse_expr_recursive(expr_t * lhs, int min_precedence, lexer_t * lex, int * lookahead, int count) {
     count++;
     printf("Count: %d\n", count);
     //pratt parsing pseudocode from wikipedia
     *lookahead = peak_token(1, lex);
     printf("%s\n", token_to_str(*lookahead));
     // while loop to continue 
-    while (is_binary_operator(*lookahead) && precedence_of(*lookahead) > precedence) { // Clean this up later.
-
+    while (is_binary_operator(*lookahead) && precedence_of(*lookahead) >= min_precedence) { // Clean this up later.
         int op = take_token(lex)->token_id; 
         expr_t * rhs = create_atom_expr(take_token(lex)); // ?check if take_token is numeral?
 
         *lookahead = peak_token(1, lex);
-        precedence = precedence_of(*lookahead);
-        // printf("%d\n", precedence);        
+        // precedence = precedence_of(*lookahead);
+        // printf("%d\n", precedence);
         // printf("%d\n", precedence);
         // "or a right-associative operator whose precedence is equal to op's." 
         // in this case we also need to increment the precedence of op passed into the recursion
 
 
-        while (is_binary_operator(*lookahead) && precedence_of(*lookahead) > precedence) {
+        while (is_binary_operator(*lookahead) && precedence_of(*lookahead) > precedence_of(op)) {
             printf("Has recursed\n");
             rhs = parse_expr_recursive(rhs, precedence_of(op), lex, lookahead, count);
             printf("RHS within recur: %s\n", tag_to_str(rhs->tag));
@@ -145,16 +143,29 @@ expr_t * parse_expr_recursive(expr_t * lhs, int precedence, lexer_t * lex, int *
 
 expr_t * parse_expr(lexer_t * lex) {
     int lookahead;
-    return parse_expr_recursive(create_atom_expr(take_token(lex)), 0, lex, &lookahead, 0);
+    expr_t * expr = create_atom_expr(take_token(lex));
+    return parse_expr_recursive(expr, 0, lex, &lookahead, 0);
 }
 
+void print_expr_recursive(expr_t * expr, int level) {
+    if (expr->tag == ATOM) {
+        // expr->data.token->token
+        printf("L%d atom: %s\n", level, token_to_str(expr->data.token.token_id));
+    } else if (expr->tag == BINOP) {
+        printf("L%d op: %s\n", level, token_to_str(expr->data.binop.op));
+        print_expr_recursive(expr->data.binop.right, level+1);
+        print_expr_recursive(expr->data.binop.left, level+1);
+    }
+}
 
-    
+void print_expr(expr_t * expr) {
+    print_expr_recursive(expr, 0);
+}
 
 
 int main(int argc, char const *argv[])
 {
-    char * file_text = "10 + 2 + 3;";
+    char * file_text = "10 * 2 + 3 / 4;";
     regex_t regex;
     regmatch_t m[26];
     regcomp(&regex, rules, REG_EXTENDED);
@@ -162,26 +173,10 @@ int main(int argc, char const *argv[])
     printf("%s\n", lex->file_text);
 
     expr_t * e = parse_expr(lex);
-    int cond = 1;
-    if (e->tag == ATOM) {
-        printf("ATOM\n");
-    } else if (e->tag == BINOP) {
-        printf("BINOP\n");
-    }
-    
-
+    print_expr(e);
     return 0;
 }
 
-void print_expr(expr_t * expr) {
-    if (expr->tag == ATOM) {
-        // expr->data.token->token
-        print(expr->data.token->token)
-    }
-
-
-
-}
 
 
 
