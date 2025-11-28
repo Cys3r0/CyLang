@@ -71,15 +71,16 @@ struct expr {
 
 
 //TODO: 
-//Create pretty print expr function.
-//test for simple arithmetic
 //add right-associative operations
 //add parentheses
 //add unary ops
+//use a ¤ as a pointer deref.
 //add IDs and func calls.
 //HERE FIX LOOKAHEAD FOR LEXER
 //Create stmt tagged union?
 //fix parse statement 
+
+
 
 char * tag_to_str(enum ExprType tag) {
     switch (tag) {
@@ -109,31 +110,32 @@ expr_t * create_atom_expr(token_t * tok) {
     return exp;
 }
 
+expr_t * parse_expr(lexer_t * expr);
 
-expr_t * parse_expr_recursive(expr_t * lhs, int min_precedence, lexer_t * lex, int * lookahead, int count) {
-    count++;
-    printf("Count: %d\n", count);
-    //pratt parsing pseudocode from wikipedia
+
+expr_t * parse_expr_recursive(expr_t * lhs, int min_precedence, lexer_t * lex, int * lookahead) {
+    // pratt parsing pseudocode from wikipedia
     *lookahead = peak_token(1, lex);
-    printf("%s\n", token_to_str(*lookahead));
-    // while loop to continue 
-    while (is_binary_operator(*lookahead) && precedence_of(*lookahead) >= min_precedence) { // Clean this up later.
+
+    while (is_binary_operator(*lookahead) && precedence_of(*lookahead) >= min_precedence) {
         int op = take_token(lex)->token_id; 
-        expr_t * rhs = create_atom_expr(take_token(lex)); // ?check if take_token is numeral?
+        token_t * next = take_token(lex); // ?check if take_token is numeral?
+        expr_t * rhs;
+
+        if (next->token_id == LPAR) {
+            rhs = parse_expr(lex);
+            take_token(lex); //Takes RPAR
+        } else {
+            rhs = create_atom_expr(next);
+        }
+            
 
         *lookahead = peak_token(1, lex);
-        // precedence = precedence_of(*lookahead);
-        // printf("%d\n", precedence);
-        // printf("%d\n", precedence);
         // "or a right-associative operator whose precedence is equal to op's." 
         // in this case we also need to increment the precedence of op passed into the recursion
 
-
         while (is_binary_operator(*lookahead) && precedence_of(*lookahead) > precedence_of(op)) {
-            printf("Has recursed\n");
-            rhs = parse_expr_recursive(rhs, precedence_of(op), lex, lookahead, count);
-            printf("RHS within recur: %s\n", tag_to_str(rhs->tag));
-            printf("Finished recursion\n");
+            rhs = parse_expr_recursive(rhs, precedence_of(op), lex, lookahead);
         }
 
         lhs = create_binop_expr(op, lhs, rhs);
@@ -143,8 +145,17 @@ expr_t * parse_expr_recursive(expr_t * lhs, int min_precedence, lexer_t * lex, i
 
 expr_t * parse_expr(lexer_t * lex) {
     int lookahead;
-    expr_t * expr = create_atom_expr(take_token(lex));
-    return parse_expr_recursive(expr, 0, lex, &lookahead, 0);
+    token_t * next = take_token(lex);
+    expr_t * expr;
+
+    if (next->token_id == LPAR) {
+        expr = parse_expr(lex);
+        take_token(lex); //Takes RPAR
+    } else {
+        expr = create_atom_expr(next);
+    }
+
+    return parse_expr_recursive(expr, 0, lex, &lookahead);
 }
 
 void print_expr_recursive(expr_t * expr, int level) {
@@ -165,7 +176,8 @@ void print_expr(expr_t * expr) {
 
 int main(int argc, char const *argv[])
 {
-    char * file_text = "10 * 2 + 3 / 4;";
+    char * file_text = "(10 + 2) * 3;";
+
     regex_t regex;
     regmatch_t m[26];
     regcomp(&regex, rules, REG_EXTENDED);
