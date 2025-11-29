@@ -1,20 +1,19 @@
 #include <regex.h>
 
 
-typedef enum {
-    ID, NUM, ASSIGN, SEMI, LPAR, RPAR,
-    LWING, RWING, LBRACKET, RBRACKET,
-    ADD, SUB, MUL, DIV, MOD, EQ, NEQ,
-    LT, LEQ, GT, GEQ, IF, WHILE, WHITESPACE,
-    NEWLINE, ELSE,
-    
-    VOID,
-} token_id_enum;
+enum TokenType {
+    ID, NUM, ASSIGN, SEMI, LPAR, 
+    RPAR, LWING, RWING, LBRACKET, RBRACKET,
+    ADD, SUB, MUL, DIV, MOD, 
+    EQ, NEQ, LT, LEQ, GT, 
+    GEQ, IF, WHILE, EXPONENT, WHITESPACE, 
+    NEWLINE, 
+};
 
 
 
 typedef struct {
-    int token_id;
+    enum TokenType token_type;
     int line;
     int col;
 
@@ -26,21 +25,23 @@ typedef struct {
 typedef struct {
     char * file_text;
     regex_t regex;
-    regmatch_t * m;
+    regmatch_t * match;
+    int rule_count;
     int line;
     int col;
 } lexer_t;
 
-extern const char * rules;
+
+extern const char * REGEX_RULES;
 
 
-char * token_to_str(token_id_enum token_id);
+char * token_to_str(enum TokenType token_id);
 
 
 
 lexer_t * init_lexer(char * file_text, regex_t regex, regmatch_t * m);
 
-token_t * init_token(int token_id, int line, int col, char * str, int value);
+token_t * init_token(enum TokenType token_type, int line, int col, char * str, int value);
 
 int peak_token(int lookahead, lexer_t * lex);
 

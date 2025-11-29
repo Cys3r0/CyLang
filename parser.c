@@ -2,53 +2,34 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-// a * b + c
-//
-// Below is what we want.
-//
-//          +
-//         / \
-//        *   c
-//       / \
-//      a   b
-// 
-// takes a, takes *, takes b, create *binop struct if + has higher precedence than *, set + left pointer to *. 
-// for a + b * c
-// take a, take +, b, create +binop struct, 
-
-// in the case of a * b, we want:
-//
-//        *   
-//       / \
-//      a   b
-// 
-// I feel like I need to do some research
-// How should a func call be represented/parsed?   
-// Perhaps make a prototype top-down operator precedence parser work for only IDs?
-// Decide on priorities. 
-
-
-int is_binary_operator(int token_id) {
+int is_binary_operator(enum TokenType token_type) {
     //works for now
-    int ret = token_id == ADD
-            || token_id == MUL
-            || token_id == SUB
-            || token_id == DIV
-            || token_id == MOD;
-    printf("is_binary_operator: %d\n", ret);
+    int ret = token_type == ADD
+            || token_type == MUL
+            || token_type == SUB
+            || token_type == DIV
+            || token_type == MOD
+            || token_type == EXPONENT;
     return ret;
 }
 
-int precedence_of(int token_id) {
-    switch (token_id){
-        case ADD: return 1;
-        case SUB: return 1;
-        case MUL: return 2;
-        case DIV: return 2;
-        case MOD: return 2;
+int is_right_associative(enum TokenType token_type) {
+    //works for now
+    int ret = token_type == EXPONENT;
+    return ret;
+}
+
+
+int precedence_of(enum TokenType token_type) {
+    switch (token_type){
+        case ADD:      return 1;
+        case SUB:      return 1;
+        case MUL:      return 2;
+        case DIV:      return 2;
+        case MOD:      return 2;
+        case EXPONENT: return 3;
         default: return -1;
     }
-    
 }
 
 enum ExprType { BINOP, ATOM };
@@ -56,7 +37,7 @@ typedef struct expr expr_t;
 
 
 typedef struct {
-    int op;
+    enum TokenType op;
     expr_t * left; 
     expr_t * right;
 } binop_t;
@@ -90,7 +71,7 @@ char * tag_to_str(enum ExprType tag) {
     }
 }
 
-expr_t * create_binop_expr(int op, expr_t * left, expr_t * right) {
+expr_t * create_binop_expr(enum TokenType op, expr_t * left, expr_t * right) {
     binop_t bin;
     bin.op = op;
     bin.left = left;
@@ -107,35 +88,40 @@ expr_t * create_atom_expr(token_t * tok) {
     expr_t * exp = malloc(sizeof(expr_t));
     exp->tag = ATOM;
     exp->data.token = *tok;
-    return exp;
+return exp;
 }
 
 expr_t * parse_expr(lexer_t * expr);
 
 
-expr_t * parse_expr_recursive(expr_t * lhs, int min_precedence, lexer_t * lex, int * lookahead) {
+expr_t * parse_expr_recursive(expr_t * lhs, int min_precedence, lexer_t * lex, enum TokenType * lookahead) {
     // pratt parsing pseudocode from wikipedia
+    int right_assoc = 0;
     *lookahead = peak_token(1, lex);
+    // printf("TokenType: %s, value: %d\n", token_to_str(lhs->data.token.token_type), lhs->data.token.value);
 
     while (is_binary_operator(*lookahead) && precedence_of(*lookahead) >= min_precedence) {
-        int op = take_token(lex)->token_id; 
+        enum TokenType op = take_token(lex)->token_type; 
         token_t * next = take_token(lex); // ?check if take_token is numeral?
         expr_t * rhs;
 
-        if (next->token_id == LPAR) {
+        if (next->token_type == LPAR) {
             rhs = parse_expr(lex);
             take_token(lex); //Takes RPAR
         } else {
             rhs = create_atom_expr(next);
         }
-            
-
+        
         *lookahead = peak_token(1, lex);
         // "or a right-associative operator whose precedence is equal to op's." 
         // in this case we also need to increment the precedence of op passed into the recursion
 
-        while (is_binary_operator(*lookahead) && precedence_of(*lookahead) > precedence_of(op)) {
-            rhs = parse_expr_recursive(rhs, precedence_of(op), lex, lookahead);
+        while ((is_binary_operator(*lookahead) && precedence_of(*lookahead) > precedence_of(op)) ||
+                (right_assoc = is_right_associative(*lookahead) && precedence_of(*lookahead) == precedence_of(op))) {
+            int prec = precedence_of(op);
+            if (right_assoc) { prec++;  right_assoc = 0; }
+
+            rhs = parse_expr_recursive(rhs, prec, lex, lookahead);
         }
 
         lhs = create_binop_expr(op, lhs, rhs);
@@ -144,11 +130,11 @@ expr_t * parse_expr_recursive(expr_t * lhs, int min_precedence, lexer_t * lex, i
 }
 
 expr_t * parse_expr(lexer_t * lex) {
-    int lookahead;
+    enum TokenType lookahead;
     token_t * next = take_token(lex);
     expr_t * expr;
 
-    if (next->token_id == LPAR) {
+    if (next->token_type == LPAR) {
         expr = parse_expr(lex);
         take_token(lex); //Takes RPAR
     } else {
@@ -161,7 +147,7 @@ expr_t * parse_expr(lexer_t * lex) {
 void print_expr_recursive(expr_t * expr, int level) {
     if (expr->tag == ATOM) {
         // expr->data.token->token
-        printf("L%d atom: %s\n", level, token_to_str(expr->data.token.token_id));
+        printf("L%d atom: %s\n", level, token_to_str(expr->data.token.token_type));
     } else if (expr->tag == BINOP) {
         printf("L%d op: %s\n", level, token_to_str(expr->data.binop.op));
         print_expr_recursive(expr->data.binop.right, level+1);
@@ -176,11 +162,11 @@ void print_expr(expr_t * expr) {
 
 int main(int argc, char const *argv[])
 {
-    char * file_text = "(10 + 2) * 3;";
+    char * file_text = "2 ^^ 3 ^^ 4;";
 
     regex_t regex;
     regmatch_t m[26];
-    regcomp(&regex, rules, REG_EXTENDED);
+    regcomp(&regex, REGEX_RULES, REG_EXTENDED);
     lexer_t * lex = init_lexer(file_text, regex, m);
     printf("%s\n", lex->file_text);
 
