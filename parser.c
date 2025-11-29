@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-int is_binary_operator(enum TokenType token_type) {
+int is_binop(enum TokenType token_type) {
     //works for now
     int ret = token_type == ADD
             || token_type == MUL
@@ -19,6 +19,14 @@ int is_right_associative(enum TokenType token_type) {
     return ret;
 }
 
+int is_unary(enum TokenType token_type) {
+    //works for now
+    int ret = token_type == SUB
+            || token_type == ADD;
+    return ret;
+}
+
+
 
 int precedence_of(enum TokenType token_type) {
     switch (token_type){
@@ -32,9 +40,13 @@ int precedence_of(enum TokenType token_type) {
     }
 }
 
-enum ExprType { BINOP, ATOM };
+enum ExprType { BINOP, UNARY, ATOM };
 typedef struct expr expr_t;
 
+typedef struct {
+    enum TokenType op;
+    expr_t * inner;
+} unary_t;
 
 typedef struct {
     enum TokenType op;
@@ -42,21 +54,22 @@ typedef struct {
     expr_t * right;
 } binop_t;
 
+
 struct expr {
     enum ExprType tag;
     union {
         binop_t binop;
+        unary_t unary;
         token_t token;
     } data;
 };
 
 
 //TODO: 
-//add right-associative operations
-//add parentheses
+//Why does the right-assoc work? 
 //add unary ops
 //use a ¤ as a pointer deref.
-//add IDs and func calls.
+//add IDs and func calls. parse_atom thing?
 //HERE FIX LOOKAHEAD FOR LEXER
 //Create stmt tagged union?
 //fix parse statement 
@@ -65,9 +78,9 @@ struct expr {
 
 char * tag_to_str(enum ExprType tag) {
     switch (tag) {
-    case ATOM: return "ATOM";
-    case BINOP: return "BINOP";
-    default: return "ERROR: NOT ATOM OR BINOP";
+        case ATOM: return "ATOM";
+        case BINOP: return "BINOP";
+        default: return "ERROR: NOT ATOM OR BINOP";
     }
 }
 
@@ -77,22 +90,32 @@ expr_t * create_binop_expr(enum TokenType op, expr_t * left, expr_t * right) {
     bin.left = left;
     bin.right = right;
     
-    expr_t * exp = malloc(sizeof(expr_t));
-    exp->tag = BINOP;
-    exp->data.binop = bin;
-    return exp;
+    expr_t * expr = malloc(sizeof(expr_t));
+    expr->tag = BINOP;
+    expr->data.binop = bin;
+    return expr;
 }
 
+expr_t * create_unary_expr(enum TokenType op, expr_t * inner) {
+    unary_t unary;
+    unary.op = op;
+    unary.inner = inner;
+    
+
+    expr_t * ret_expr = malloc(sizeof(expr_t));
+    ret_expr->tag = UNARY;
+    ret_expr->data.unary = unary;
+    return ret_expr;
+}
 
 expr_t * create_atom_expr(token_t * tok) {
     expr_t * exp = malloc(sizeof(expr_t));
     exp->tag = ATOM;
     exp->data.token = *tok;
-return exp;
+    return exp;
 }
 
 expr_t * parse_expr(lexer_t * expr);
-
 
 expr_t * parse_expr_recursive(expr_t * lhs, int min_precedence, lexer_t * lex, enum TokenType * lookahead) {
     // pratt parsing pseudocode from wikipedia
@@ -100,7 +123,7 @@ expr_t * parse_expr_recursive(expr_t * lhs, int min_precedence, lexer_t * lex, e
     *lookahead = peak_token(1, lex);
     // printf("TokenType: %s, value: %d\n", token_to_str(lhs->data.token.token_type), lhs->data.token.value);
 
-    while (is_binary_operator(*lookahead) && precedence_of(*lookahead) >= min_precedence) {
+    while (is_binop(*lookahead) && precedence_of(*lookahead) >= min_precedence) {
         enum TokenType op = take_token(lex)->token_type; 
         token_t * next = take_token(lex); // ?check if take_token is numeral?
         expr_t * rhs;
@@ -108,13 +131,23 @@ expr_t * parse_expr_recursive(expr_t * lhs, int min_precedence, lexer_t * lex, e
         if (next->token_type == LPAR) {
             rhs = parse_expr(lex);
             take_token(lex); //Takes RPAR
+        } else if (is_unary(next->token_type)) {
+            expr_t * inner;
+            if (peak_token(1, lex) == LPAR) {
+                take_token(lex); //Takes LPAR
+                inner = parse_expr(lex);
+                take_token(lex); //Takes RPAR
+            } else {
+                inner = create_atom_expr(take_token(lex));
+            }
+            rhs = create_unary_expr(next->token_type, inner);
         } else {
-            rhs = create_atom_expr(next);
+            rhs = create_atom_expr(next);    
         }
         
         *lookahead = peak_token(1, lex);
 
-        while ((is_binary_operator(*lookahead) && precedence_of(*lookahead) > precedence_of(op)) ||
+        while ((is_binop(*lookahead) && precedence_of(*lookahead) > precedence_of(op)) ||
                 (is_right_associative(*lookahead) && (right_assoc = precedence_of(*lookahead) == precedence_of(op)))) {
             int inc = (right_assoc) ? 0 : 1;
 
@@ -134,6 +167,17 @@ expr_t * parse_expr(lexer_t * lex) {
     if (next->token_type == LPAR) {
         expr = parse_expr(lex);
         take_token(lex); //Takes RPAR
+    } else if (is_unary(next->token_type)) {
+        expr_t * inner;
+        if (peak_token(1, lex) == LPAR) {
+            take_token(lex); //Takes LPAR
+            inner = parse_expr(lex);
+            take_token(lex); //Takes RPAR
+        } else {
+            inner = create_atom_expr(take_token(lex));
+        }
+
+        expr = create_unary_expr(next->token_type, inner);
     } else {
         expr = create_atom_expr(next);    
     }
@@ -142,12 +186,16 @@ expr_t * parse_expr(lexer_t * lex) {
 }
 
 void print_expr_recursive(expr_t * expr, int level) {
+    
     if (expr->tag == ATOM) {
         printf("L%d atom: %s = %d\n", level, token_to_str(expr->data.token.token_type), expr->data.token.value);
     } else if (expr->tag == BINOP) {
+        printf("L%d binop: %s\n", level, token_to_str(expr->data.binop.op));
         print_expr_recursive(expr->data.binop.right, level+1);
         print_expr_recursive(expr->data.binop.left, level+1);
-        printf("L%d op: %s\n", level, token_to_str(expr->data.binop.op));
+    } else if (expr->tag == UNARY) {
+        printf("L%d unary: %s\n", level, token_to_str(expr->data.unary.op));
+        print_expr_recursive(expr->data.unary.inner, level+1);
     }
 }
 
@@ -158,13 +206,19 @@ void print_expr(expr_t * expr) {
 
 int main(int argc, char const *argv[])
 {
-    char * file_text = "1 ^^ 2 ^^ 3;";
+    char * file_text = "-(4 * -2);";
 
     regex_t regex;
-    regmatch_t m[26];
+    regmatch_t m[NUMBER_OF_TOKENS + 1];
     regcomp(&regex, REGEX_RULES, REG_EXTENDED);
     lexer_t * lex = init_lexer(file_text, regex, m);
     printf("%s\n", lex->file_text);
+    
+    for (int i = 0; i < 9; i++) {
+        printf("%s ", token_to_str(peak_token(i+1, lex)));
+    }
+    printf("\n");
+    
 
     expr_t * e = parse_expr(lex);
     print_expr(e);

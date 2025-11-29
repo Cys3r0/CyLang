@@ -33,7 +33,7 @@ typedef struct {
 
 
 extern const char * REGEX_RULES;
-
+extern const int NUMBER_OF_TOKENS;
 
 char * token_to_str(enum TokenType token_id);
 
