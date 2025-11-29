@@ -113,15 +113,12 @@ expr_t * parse_expr_recursive(expr_t * lhs, int min_precedence, lexer_t * lex, e
         }
         
         *lookahead = peak_token(1, lex);
-        // "or a right-associative operator whose precedence is equal to op's." 
-        // in this case we also need to increment the precedence of op passed into the recursion
 
         while ((is_binary_operator(*lookahead) && precedence_of(*lookahead) > precedence_of(op)) ||
-                (right_assoc = is_right_associative(*lookahead) && precedence_of(*lookahead) == precedence_of(op))) {
-            int prec = precedence_of(op);
-            if (right_assoc) { prec++;  right_assoc = 0; }
+                (is_right_associative(*lookahead) && (right_assoc = precedence_of(*lookahead) == precedence_of(op)))) {
+            int inc = (right_assoc) ? 0 : 1;
 
-            rhs = parse_expr_recursive(rhs, prec, lex, lookahead);
+            rhs = parse_expr_recursive(rhs, precedence_of(op) + inc, lex, lookahead);
         }
 
         lhs = create_binop_expr(op, lhs, rhs);
@@ -138,7 +135,7 @@ expr_t * parse_expr(lexer_t * lex) {
         expr = parse_expr(lex);
         take_token(lex); //Takes RPAR
     } else {
-        expr = create_atom_expr(next);
+        expr = create_atom_expr(next);    
     }
 
     return parse_expr_recursive(expr, 0, lex, &lookahead);
@@ -146,12 +143,11 @@ expr_t * parse_expr(lexer_t * lex) {
 
 void print_expr_recursive(expr_t * expr, int level) {
     if (expr->tag == ATOM) {
-        // expr->data.token->token
-        printf("L%d atom: %s\n", level, token_to_str(expr->data.token.token_type));
+        printf("L%d atom: %s = %d\n", level, token_to_str(expr->data.token.token_type), expr->data.token.value);
     } else if (expr->tag == BINOP) {
-        printf("L%d op: %s\n", level, token_to_str(expr->data.binop.op));
         print_expr_recursive(expr->data.binop.right, level+1);
         print_expr_recursive(expr->data.binop.left, level+1);
+        printf("L%d op: %s\n", level, token_to_str(expr->data.binop.op));
     }
 }
 
@@ -162,7 +158,7 @@ void print_expr(expr_t * expr) {
 
 int main(int argc, char const *argv[])
 {
-    char * file_text = "2 ^^ 3 ^^ 4;";
+    char * file_text = "1 ^^ 2 ^^ 3;";
 
     regex_t regex;
     regmatch_t m[26];
