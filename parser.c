@@ -26,6 +26,8 @@ int is_unary(enum TokenType token_type) {
     return ret;
 }
 
+int is_atom(enum TokenType token_type) ;
+
 
 
 int precedence_of(enum TokenType token_type) {
@@ -66,13 +68,12 @@ struct expr {
 
 
 //TODO: 
-//Why does the right-assoc work? 
-//add unary ops
+//clean up unary and paran into funcs
+//Fix unary so that it works for nested unaries.
+//add IDs and func calls. parse_atom?
+//split peak into peak_n_tokens and peak_token
 //use a ¤ as a pointer deref.
-//add IDs and func calls. parse_atom thing?
-//HERE FIX LOOKAHEAD FOR LEXER
-//Create stmt tagged union?
-//fix parse statement 
+//fix parse statement pwn
 
 
 
@@ -101,7 +102,7 @@ expr_t * create_unary_expr(enum TokenType op, expr_t * inner) {
     unary.op = op;
     unary.inner = inner;
     
-
+    
     expr_t * ret_expr = malloc(sizeof(expr_t));
     ret_expr->tag = UNARY;
     ret_expr->data.unary = unary;
@@ -115,7 +116,30 @@ expr_t * create_atom_expr(token_t * tok) {
     return exp;
 }
 
+
 expr_t * parse_expr(lexer_t * expr);
+
+
+
+expr_t * parse_expr_paran(lexer_t * lex) {
+    expr_t * inner = parse_expr(lex);
+    take_token(lex); //Takes RPAR
+    return inner;
+}
+
+expr_t * parse_expr_unary(enum TokenType tok_type, lexer_t * lex) {
+    expr_t * inner;
+    token_t * next = take_token(lex);
+    if (next->token_type == LPAR) {
+        inner = parse_expr_paran(lex);
+    } else if (is_unary(next->token_type)){
+        inner = parse_expr_unary(tok_type, lex);
+    } else {
+        // this should be a parse atom call instead or something
+        inner = create_atom_expr(next);
+    }
+    return create_unary_expr(tok_type, inner);
+}
 
 expr_t * parse_expr_recursive(expr_t * lhs, int min_precedence, lexer_t * lex, enum TokenType * lookahead) {
     // pratt parsing pseudocode from wikipedia
@@ -129,18 +153,9 @@ expr_t * parse_expr_recursive(expr_t * lhs, int min_precedence, lexer_t * lex, e
         expr_t * rhs;
 
         if (next->token_type == LPAR) {
-            rhs = parse_expr(lex);
-            take_token(lex); //Takes RPAR
+            rhs = parse_expr_paran(lex);
         } else if (is_unary(next->token_type)) {
-            expr_t * inner;
-            if (peak_token(1, lex) == LPAR) {
-                take_token(lex); //Takes LPAR
-                inner = parse_expr(lex);
-                take_token(lex); //Takes RPAR
-            } else {
-                inner = create_atom_expr(take_token(lex));
-            }
-            rhs = create_unary_expr(next->token_type, inner);
+            rhs = parse_expr_unary(next->token_type, lex);
         } else {
             rhs = create_atom_expr(next);    
         }
@@ -165,19 +180,9 @@ expr_t * parse_expr(lexer_t * lex) {
     expr_t * expr;
 
     if (next->token_type == LPAR) {
-        expr = parse_expr(lex);
-        take_token(lex); //Takes RPAR
+        expr = parse_expr_paran(lex);
     } else if (is_unary(next->token_type)) {
-        expr_t * inner;
-        if (peak_token(1, lex) == LPAR) {
-            take_token(lex); //Takes LPAR
-            inner = parse_expr(lex);
-            take_token(lex); //Takes RPAR
-        } else {
-            inner = create_atom_expr(take_token(lex));
-        }
-
-        expr = create_unary_expr(next->token_type, inner);
+        expr = parse_expr_unary(next->token_type, lex);
     } else {
         expr = create_atom_expr(next);    
     }
@@ -186,7 +191,6 @@ expr_t * parse_expr(lexer_t * lex) {
 }
 
 void print_expr_recursive(expr_t * expr, int level) {
-    
     if (expr->tag == ATOM) {
         printf("L%d atom: %s = %d\n", level, token_to_str(expr->data.token.token_type), expr->data.token.value);
     } else if (expr->tag == BINOP) {
@@ -206,7 +210,7 @@ void print_expr(expr_t * expr) {
 
 int main(int argc, char const *argv[])
 {
-    char * file_text = "-(4 * -2);";
+    char * file_text = "-4 * -2;";
 
     regex_t regex;
     regmatch_t m[NUMBER_OF_TOKENS + 1];
