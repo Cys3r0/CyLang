@@ -22,6 +22,7 @@ const int NUMBER_OF_TOKENS = 26;
 const char * REGEX_RULES = 
     "(;)"
     "|(=)"
+    "|(,)"
     "|(\\()"
     "|(\\))"
     "|(\\{)"
@@ -47,12 +48,12 @@ const char * REGEX_RULES =
     "|([ ]+)"
     "|(\n)";
 
+
 char * token_to_str(enum TokenType token_type) {
     switch (token_type) {
-        case ID: return "ID";
-        case NUM: return "NUM";
-        case ASSIGN: return "ASSIGN";
         case SEMI: return "SEMI";
+        case ASSIGN: return "ASSIGN";
+        case COMMA: return "COMMA";
         case LPAR: return "LPAR";
         case RPAR: return "RPAR";
         case LWING: return "LWING";
@@ -72,6 +73,8 @@ char * token_to_str(enum TokenType token_type) {
         case GEQ: return "GEQ";
         case IF: return "IF";
         case WHILE: return "WHILE";
+        case ID: return "ID";
+        case NUM: return "NUM";
         case EXPONENT: return "EXPONENT";
         case WHITESPACE: return "WHITESPACE";
         case NEWLINE: return "NEWLINE";
@@ -109,7 +112,12 @@ token_t * init_token(enum TokenType token_type, int line, int col, char * str, i
     return t; 
 }
 
-int peak_token(int lookahead, lexer_t * lex) { 
+enum TokenType peak_token(lexer_t * lex) {
+    return peak_n_tokens(1, lex);
+}
+
+
+enum TokenType peak_n_tokens(int lookahead, lexer_t * lex) { 
     // @DEBUG
     // Inefficient, could memoize previously peeked values.
     // Store pointer to last memoized/regexed in lexer_t.
@@ -129,7 +137,7 @@ int peak_token(int lookahead, lexer_t * lex) {
 
         if (regexec(&lex->regex, temp_str, lex->rule_count + 1, m, 0) != 0) 
             return -1;
-            
+
         uint valid = !(m[25].rm_so != -1 || m[26].rm_so != -1);
         if (valid) 
             valid_count++;
@@ -137,31 +145,32 @@ int peak_token(int lookahead, lexer_t * lex) {
         temp_str += m[0].rm_eo - m[0].rm_so;
     }
 
-    if (m[1].rm_so != -1)  return SEMI;
-    if (m[2].rm_so != -1)  return ASSIGN;
-    if (m[3].rm_so != -1)  return LPAR;
-    if (m[4].rm_so != -1)  return RPAR;
-    if (m[5].rm_so != -1)  return LWING;
-    if (m[6].rm_so != -1)  return RWING;
-    if (m[7].rm_so != -1)  return LBRACKET;
-    if (m[8].rm_so != -1)  return RBRACKET;
-    if (m[9].rm_so != -1)  return ADD;
-    if (m[10].rm_so != -1) return SUB;
-    if (m[11].rm_so != -1) return MUL;
-    if (m[12].rm_so != -1) return DIV;
-    if (m[13].rm_so != -1) return MOD;
-    if (m[14].rm_so != -1) return EQ;
-    if (m[15].rm_so != -1) return NEQ;
-    if (m[16].rm_so != -1) return LT;
-    if (m[17].rm_so != -1) return LEQ;
-    if (m[18].rm_so != -1) return GT;
-    if (m[19].rm_so != -1) return GEQ;
-    if (m[20].rm_so != -1) return IF;
-    if (m[21].rm_so != -1) return WHILE;
-    if (m[22].rm_so != -1) return ID;
-    if (m[23].rm_so != -1) return NUM;
-    if (m[24].rm_so != -1) return EXPONENT;
-    return -1;
+    if (m[SEMI].rm_so != -1)     return SEMI;
+    if (m[ASSIGN].rm_so != -1)   return ASSIGN;
+    if (m[COMMA].rm_so != -1)    return COMMA;
+    if (m[LPAR].rm_so != -1)     return LPAR;
+    if (m[RPAR].rm_so != -1)     return RPAR;
+    if (m[LWING].rm_so != -1)    return LWING;
+    if (m[RWING].rm_so != -1)    return RWING;
+    if (m[LBRACKET].rm_so != -1) return LBRACKET;
+    if (m[RBRACKET].rm_so != -1) return RBRACKET;
+    if (m[ADD].rm_so != -1)      return ADD;
+    if (m[SUB].rm_so != -1)      return SUB;
+    if (m[MUL].rm_so != -1)      return MUL;
+    if (m[DIV].rm_so != -1)      return DIV;
+    if (m[MOD].rm_so != -1)      return MOD;
+    if (m[EQ].rm_so != -1)       return EQ;
+    if (m[NEQ].rm_so != -1)      return NEQ;
+    if (m[LT].rm_so != -1)       return LT;
+    if (m[LEQ].rm_so != -1)      return LEQ;
+    if (m[GT].rm_so != -1)       return GT;
+    if (m[GEQ].rm_so != -1)      return GEQ;
+    if (m[IF].rm_so != -1)       return IF;
+    if (m[WHILE].rm_so != -1)    return WHILE;
+    if (m[ID].rm_so != -1)       return ID;
+    if (m[NUM].rm_so != -1)      return NUM;
+    if (m[EXPONENT].rm_so != -1) return EXPONENT;
+    return -1;  
 }
 
 token_t * take_token(lexer_t * lex) { 
@@ -193,70 +202,73 @@ token_t * take_token(lexer_t * lex) {
     }
 
     int token_len = m[0].rm_eo - m[0].rm_so;
-    if (m[1].rm_so != -1) { 
+    if (m[SEMI].rm_so != -1) { 
         token_type = SEMI;
     }
-    else if (m[2].rm_so != -1) { 
+    else if (m[ASSIGN].rm_so != -1) { 
         token_type = ASSIGN;
     }
-    else if (m[3].rm_so != -1) { 
+    else if (m[COMMA].rm_so != -1) { 
+        token_type = COMMA;
+    }
+    else if (m[LPAR].rm_so != -1) { 
         token_type = LPAR;
     }
-    else if (m[4].rm_so != -1) { 
+    else if (m[RPAR].rm_so != -1) { 
         token_type = RPAR;
     }
-    else if (m[5].rm_so != -1) { 
+    else if (m[LWING].rm_so != -1) { 
         token_type = LWING;
     }
-    else if (m[6].rm_so != -1) { 
+    else if (m[RWING].rm_so != -1) { 
         token_type = RWING;
     }
-    else if (m[7].rm_so != -1) { 
+    else if (m[LBRACKET].rm_so != -1) { 
         token_type = LBRACKET;
     }
-    else if (m[8].rm_so != -1) { 
+    else if (m[RBRACKET].rm_so != -1) { 
         token_type = RBRACKET;
     }
-    else if (m[9].rm_so != -1) {
+    else if (m[ADD].rm_so != -1) {
         token_type = ADD;
     }
-    else if (m[10].rm_so != -1) {
+    else if (m[SUB].rm_so != -1) {
         token_type = SUB;
     }
-    else if (m[11].rm_so != -1) {
+    else if (m[MUL].rm_so != -1) {
         token_type = MUL; 
     }
-    else if (m[12].rm_so != -1) {
+    else if (m[DIV].rm_so != -1) {
         token_type = DIV;
     }
-    else if (m[13].rm_so != -1) {
+    else if (m[MOD].rm_so != -1) {
         token_type = MOD;
     }
-    else if (m[14].rm_so != -1) {
+    else if (m[EQ].rm_so != -1) {
         token_type = EQ;
     }
-    else if (m[15].rm_so != -1) {
+    else if (m[NEQ].rm_so != -1) {
         token_type = NEQ;
     }
-    else if (m[16].rm_so != -1) {
+    else if (m[LT].rm_so != -1) {
         token_type = LT;
     }
-    else if (m[17].rm_so != -1) {
+    else if (m[LEQ].rm_so != -1) {
         token_type = LEQ;
     }
-    else if (m[18].rm_so != -1) {
+    else if (m[GT].rm_so != -1) {
         token_type = GT;
     }
-    else if (m[19].rm_so != -1) {
+    else if (m[GEQ].rm_so != -1) {
         token_type = GEQ;
     }
-    else if (m[20].rm_so != -1) {
+    else if (m[IF].rm_so != -1) {
         token_type = IF;
     }
-    else if (m[21].rm_so != -1) {
+    else if (m[WHILE].rm_so != -1) {
         token_type = WHILE;
     }
-    else if (m[22].rm_so != -1) { 
+    else if (m[ID].rm_so != -1) { 
         token_type = ID;
         s = malloc(token_len + 1); 
         for (int i = 0; i < token_len; i++) 
@@ -264,7 +276,7 @@ token_t * take_token(lexer_t * lex) {
         
         s[token_len] = '\0';
     }
-    else if (m[23].rm_so != -1) { 
+    else if (m[NUM].rm_so != -1) { 
         token_type = NUM;
         char * value_s = malloc(token_len + 1);
         for (int i = 0; i < token_len; i++) 
@@ -273,14 +285,14 @@ token_t * take_token(lexer_t * lex) {
         value_s[token_len] = '\0';
         value = atoi(value_s);
     }
-    else if (m[24].rm_so != -1) {
+    else if (m[EXPONENT].rm_so != -1) {
         token_type = EXPONENT;
     }
-    else if (m[25].rm_so != -1) {
+    else if (m[WHITESPACE].rm_so != -1) {
         token_type = WHITESPACE;
         lex->col += m[0].rm_eo - m[0].rm_so;
     }
-    else if (m[26].rm_so != -1) {
+    else if (m[NEWLINE].rm_so != -1) {
         token_type = NEWLINE;
         lex->line++;
         lex->col = 1;
@@ -293,15 +305,19 @@ token_t * take_token(lexer_t * lex) {
 }
 
 
-int test_main() {
-    char * file_text = "if (abs == 10)                print(10000); while (list) {a[]}";
+int main() {
+    char * file_text = "if (abs == 10) , A - B       print(10000); while (list) {a[]}";
     regex_t regex;
     regmatch_t m[NUMBER_OF_TOKENS+1];
     regcomp(&regex, REGEX_RULES, REG_EXTENDED);
     lexer_t * lex = init_lexer(file_text, regex, m);
     printf("%s\n", lex->file_text);
+    for (int i = 1; i < 28; i++) {
+        printf("%s ", token_to_str(peak_n_tokens(i, lex)));
+    }
+    printf("\n");
 
-    printf("%s\n", token_to_str(peak_token(1, lex)));
+    
     // for (uint i = 1; i < 20; i++) {
     //     token_t * t = take_token(lex);
     //     if (t->token_type == NUM){

@@ -28,8 +28,6 @@ int is_unary(enum TokenType token_type) {
 
 int is_atom(enum TokenType token_type) ;
 
-
-
 int precedence_of(enum TokenType token_type) {
     switch (token_type){
         case ADD:      return 1;
@@ -43,6 +41,7 @@ int precedence_of(enum TokenType token_type) {
 }
 
 enum ExprType { BINOP, UNARY, ATOM };
+enum ExprAtomType { EXPR_FUNC_ID, EXPR_NUMERAL, EXPR_ID };
 typedef struct expr expr_t;
 
 typedef struct {
@@ -56,28 +55,42 @@ typedef struct {
     expr_t * right;
 } binop_t;
 
+typedef struct {
+    token_t * func_id;
+    expr_t ** right;
+} expr_func_call_t;
+
+struct expr_atom_t {
+    enum ExprAtomType tag;
+    union {
+        token_t token;
+        expr_func_call_t func_call;
+    } data;
+}
 
 struct expr {
     enum ExprType tag;
     union {
         binop_t binop;
         unary_t unary;
-        token_t token;
+        expr_atom_t atom;
     } data;
 };
 
 
 //TODO: 
-//clean up unary and paran into funcs
-//Fix unary so that it works for nested unaries.
+//create a stmt type
+//test parser for the input ()
+//create a if, block, while, etc stmts.
+//rename token enum to TOK_[token type] to differentiate ASSIGN from STMT_ASSIGN
 //add IDs and func calls. parse_atom?
-//split peak into peak_n_tokens and peak_token
 //use a ¤ as a pointer deref.
-//fix parse statement pwn
+//Figure out how to propagate error messages
+//skip_token take wrapper? 
 
 
 
-char * tag_to_str(enum ExprType tag) {
+char * expr_tag_to_str(enum ExprType tag) {
     switch (tag) {
         case ATOM: return "ATOM";
         case BINOP: return "BINOP";
@@ -119,8 +132,6 @@ expr_t * create_atom_expr(token_t * tok) {
 
 expr_t * parse_expr(lexer_t * expr);
 
-
-
 expr_t * parse_expr_paran(lexer_t * lex) {
     expr_t * inner = parse_expr(lex);
     take_token(lex); //Takes RPAR
@@ -144,7 +155,7 @@ expr_t * parse_expr_unary(enum TokenType tok_type, lexer_t * lex) {
 expr_t * parse_expr_recursive(expr_t * lhs, int min_precedence, lexer_t * lex, enum TokenType * lookahead) {
     // pratt parsing pseudocode from wikipedia
     int right_assoc = 0;
-    *lookahead = peak_token(1, lex);
+    *lookahead = peak_token(lex);
     // printf("TokenType: %s, value: %d\n", token_to_str(lhs->data.token.token_type), lhs->data.token.value);
 
     while (is_binop(*lookahead) && precedence_of(*lookahead) >= min_precedence) {
@@ -160,7 +171,7 @@ expr_t * parse_expr_recursive(expr_t * lhs, int min_precedence, lexer_t * lex, e
             rhs = create_atom_expr(next);    
         }
         
-        *lookahead = peak_token(1, lex);
+        *lookahead = peak_token(lex);
 
         while ((is_binop(*lookahead) && precedence_of(*lookahead) > precedence_of(op)) ||
                 (is_right_associative(*lookahead) && (right_assoc = precedence_of(*lookahead) == precedence_of(op)))) {
@@ -208,9 +219,8 @@ void print_expr(expr_t * expr) {
 }
 
 
-int main(int argc, char const *argv[])
-{
-    char * file_text = "-4 * -2;";
+int main(int argc, char const *argv[]) {
+    char * file_text = "---4;";
 
     regex_t regex;
     regmatch_t m[NUMBER_OF_TOKENS + 1];
@@ -219,18 +229,140 @@ int main(int argc, char const *argv[])
     printf("%s\n", lex->file_text);
     
     for (int i = 0; i < 9; i++) {
-        printf("%s ", token_to_str(peak_token(i+1, lex)));
+        printf("%s ", token_to_str(peak_n_tokens(i + 1, lex)));
     }
     printf("\n");
     
-
     expr_t * e = parse_expr(lex);
     print_expr(e);
     return 0;
 }
 
 
+enum StmtType { STMT_IF, STMT_ID_DECL, STMT_ASSIGN };
 
+typedef struct {
+    enum StmtType tag;
+    union {
+        stmt_if_t * stmt_if;
+        stmt_id_decl_t * stmt_id_decl;
+        stmt_assign_t * stmt_assign;
+
+    } data;
+} stmt_t;
+
+typedef struct {
+    expr_t * condition;
+    stmt_t ** then;
+    stmt_t ** else_;
+} stmt_if_t;
+
+
+typedef struct {
+    token_t * type;
+    token_t * variable;
+    expr_t * value;
+} stmt_id_decl_t;
+
+typedef struct {
+    token_t * variable;
+    expr_t * value;
+} stmt_id_decl_t;
+
+
+stmt_t * parse_stmt_id_decl(lexer_t * lex) {
+    token_t * type = take_token(lex);
+    token_t * variable = take_token(lex);
+    enum TokenType next = take_token(lex)->token_type;
+
+    expr_t * value = (next == ASSIGN) ? parse_expr(lex) : NULL; 
+    return create_id_decl_stmt(type, variable, value);
+}
+
+stmt_t * parse_stmt_assign(lexer_t * lex) {
+    token_t * variable = take_token(lex);
+    take_token(lex); // take ASSIGN
+    token_t * value = parse_expr(lex);
+    take_token(lex); // take SEMI
+    return create_assign_stmt(variable, value);
+}
+
+stmt_t * create_assign_stmt(token_t * variable, expr_t * value) {
+    stmt_assign_t assign = malloc(sizeof(stmt_assign_t));
+    assign->variable = variable;
+    assign->value = value;
+
+    stmt_t * stmt = malloc(sizeof(stmt_assign_t));
+    stmt->tag = STMT_ASSIGN;
+    stmt->data = assign;
+    return stmt;
+}
+
+stmt_t * create_id_decl_stmt(token_t * type, token_t * variable, expr_t * value) {
+    // value default to null 
+    stmt_id_decl_t id_decl = malloc(sizeof(stmt_assign_t));
+    id_decl->type = type;
+    id_decl->variable = variable;
+    id_decl->value = value;
+
+    stmt_t * stmt = malloc(sizeof(stmt_assign_t));
+    stmt->tag = STMT_ID_DECL;
+    stmt->data = id_decl;
+    return stmt;
+}
+
+expr_t * parse_func_call_expr(lexer_t * lex) {
+    int arg_count = 0;
+    token_t * func_id = take_token(lex);
+    take_token(lex); // LPAR
+    expr_t * first_arg = parse_expr(lex);
+    expr_t ** args = malloc(50 * sizeof(expr_t *));
+
+    if (first_arg) {
+        args[arg_count] = first_arg;
+        arg_count++;
+        
+        token_t * next;
+        while ((next = take_token(lex)) != COMMA) {
+            if (arg_count >= 50) {
+                print("Function call may not exceed 50 arguments.")
+                exit(EXIT_FAILURE);
+            }
+
+            args[arg_count] = parse_expr(lex);
+            arg_count++;
+        }
+    }
+
+    expr_func_call_t * func_call = malloc(sizeof(expr_func_call_t));
+     * func_call = malloc(sizeof(expr_func_call_t));
+
+
+
+    
+    take_token(lex); // RPAR
+}
+
+
+// void parse_if(char ** str, lexer_t lexer) { 
+//     take_next_token(lex); //IF 
+//     take_next_token(lex); //LPAR
+    
+//     parse_expr(lex);
+    
+//     take_next_token(lex); //RPAR
+    
+//     // !!! parse_block() call !!!
+
+//     if (peak_next_token(lex) == ELSE) {
+//         take_next_token(lex); 
+//         take_next_token(lex);
+
+//         // !!! parse_block() call !!!
+
+//         take_next_token(lex); 
+//     }
+// }
 
 
 
@@ -252,7 +384,7 @@ int main(int argc, char const *argv[])
 
 // void parse_if(char ** str, lexer_t lexer) { 
 //     take_next_token(&file, IF, lexer); 
-//     take_next_token(&file, LPAR, lexer); 
+//     take_next_token(&file, LPAR, lexer);
     
 //     // !!! parse_expression() call !!!
     
@@ -294,6 +426,8 @@ int main(int argc, char const *argv[])
 //     parse_block();
     
 // }
+
+
 // void parse_block() {
 //     take_next_token(); //LBRACKET
 //     while (peak_next_token != RBRACKET) {
