@@ -305,7 +305,7 @@ token_t * take_token(lexer_t * lex) {
 }
 
 
-int main() {
+int test_main() {
     char * file_text = "if (abs == 10) , A - B       print(10000); while (list) {a[]}";
     regex_t regex;
     regmatch_t m[NUMBER_OF_TOKENS+1];

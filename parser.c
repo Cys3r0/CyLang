@@ -57,16 +57,16 @@ typedef struct {
 
 typedef struct {
     token_t * func_id;
-    expr_t ** right;
+    expr_t ** args;
 } expr_func_call_t;
 
-struct expr_atom_t {
+typedef struct {
     enum ExprAtomType tag;
     union {
         token_t token;
         expr_func_call_t func_call;
-    } data;
-}
+    };
+} expr_atom_t; 
 
 struct expr {
     enum ExprType tag;
@@ -74,11 +74,12 @@ struct expr {
         binop_t binop;
         unary_t unary;
         expr_atom_t atom;
-    } data;
+    };
 };
 
 
 //TODO: 
+//Update atom exprs and check that it works
 //create a stmt type
 //test parser for the input ()
 //create a if, block, while, etc stmts.
@@ -106,7 +107,7 @@ expr_t * create_binop_expr(enum TokenType op, expr_t * left, expr_t * right) {
     
     expr_t * expr = malloc(sizeof(expr_t));
     expr->tag = BINOP;
-    expr->data.binop = bin;
+    expr->binop = bin;
     return expr;
 }
 
@@ -118,14 +119,18 @@ expr_t * create_unary_expr(enum TokenType op, expr_t * inner) {
     
     expr_t * ret_expr = malloc(sizeof(expr_t));
     ret_expr->tag = UNARY;
-    ret_expr->data.unary = unary;
+    ret_expr->unary = unary;
     return ret_expr;
 }
 
 expr_t * create_atom_expr(token_t * tok) {
+    expr_atom_t atom;
+    atom.tag = EXPR_NUMERAL;
+    atom.token = *tok;
+
     expr_t * exp = malloc(sizeof(expr_t));
     exp->tag = ATOM;
-    exp->data.token = *tok;
+    exp->atom = atom;
     return exp;
 }
 
@@ -156,7 +161,7 @@ expr_t * parse_expr_recursive(expr_t * lhs, int min_precedence, lexer_t * lex, e
     // pratt parsing pseudocode from wikipedia
     int right_assoc = 0;
     *lookahead = peak_token(lex);
-    // printf("TokenType: %s, value: %d\n", token_to_str(lhs->data.token.token_type), lhs->data.token.value);
+    // printf("TokenType: %s, value: %d\n", token_to_str(lhs->token.token_type), lhs->token.value);
 
     while (is_binop(*lookahead) && precedence_of(*lookahead) >= min_precedence) {
         enum TokenType op = take_token(lex)->token_type; 
@@ -203,14 +208,14 @@ expr_t * parse_expr(lexer_t * lex) {
 
 void print_expr_recursive(expr_t * expr, int level) {
     if (expr->tag == ATOM) {
-        printf("L%d atom: %s = %d\n", level, token_to_str(expr->data.token.token_type), expr->data.token.value);
+        printf("L%d atom: %s = %d\n", level, token_to_str(expr->atom.token.token_type), expr->atom.token.value);
     } else if (expr->tag == BINOP) {
-        printf("L%d binop: %s\n", level, token_to_str(expr->data.binop.op));
-        print_expr_recursive(expr->data.binop.right, level+1);
-        print_expr_recursive(expr->data.binop.left, level+1);
+        printf("L%d binop: %s\n", level, token_to_str(expr->binop.op));
+        print_expr_recursive(expr->binop.right, level+1);
+        print_expr_recursive(expr->binop.left, level+1);
     } else if (expr->tag == UNARY) {
-        printf("L%d unary: %s\n", level, token_to_str(expr->data.unary.op));
-        print_expr_recursive(expr->data.unary.inner, level+1);
+        printf("L%d unary: %s\n", level, token_to_str(expr->unary.op));
+        print_expr_recursive(expr->unary.inner, level+1);
     }
 }
 
@@ -239,109 +244,118 @@ int main(int argc, char const *argv[]) {
 }
 
 
-enum StmtType { STMT_IF, STMT_ID_DECL, STMT_ASSIGN };
+// enum StmtType { STMT_IF, STMT_ID_DECL, STMT_ASSIGN };
 
-typedef struct {
-    enum StmtType tag;
-    union {
-        stmt_if_t * stmt_if;
-        stmt_id_decl_t * stmt_id_decl;
-        stmt_assign_t * stmt_assign;
+// typedef struct {
+//     enum StmtType tag;
+//     union {
+//         stmt_if_t * stmt_if;
+//         stmt_id_decl_t * stmt_id_decl;
+//         stmt_assign_t * stmt_assign;
 
-    } data;
-} stmt_t;
+//     } data;
+// } stmt_t;
 
-typedef struct {
-    expr_t * condition;
-    stmt_t ** then;
-    stmt_t ** else_;
-} stmt_if_t;
-
-
-typedef struct {
-    token_t * type;
-    token_t * variable;
-    expr_t * value;
-} stmt_id_decl_t;
-
-typedef struct {
-    token_t * variable;
-    expr_t * value;
-} stmt_id_decl_t;
+// typedef struct {
+//     expr_t * condition;
+//     stmt_t ** then;
+//     stmt_t ** else_;
+// } stmt_if_t;
 
 
-stmt_t * parse_stmt_id_decl(lexer_t * lex) {
-    token_t * type = take_token(lex);
-    token_t * variable = take_token(lex);
-    enum TokenType next = take_token(lex)->token_type;
+// typedef struct {
+//     token_t * type;
+//     token_t * variable;
+//     expr_t * value;
+// } stmt_id_decl_t;
 
-    expr_t * value = (next == ASSIGN) ? parse_expr(lex) : NULL; 
-    return create_id_decl_stmt(type, variable, value);
-}
+// typedef struct {
+//     token_t * variable;
+//     expr_t * value;
+// } stmt_id_decl_t;
 
-stmt_t * parse_stmt_assign(lexer_t * lex) {
-    token_t * variable = take_token(lex);
-    take_token(lex); // take ASSIGN
-    token_t * value = parse_expr(lex);
-    take_token(lex); // take SEMI
-    return create_assign_stmt(variable, value);
-}
 
-stmt_t * create_assign_stmt(token_t * variable, expr_t * value) {
-    stmt_assign_t assign = malloc(sizeof(stmt_assign_t));
-    assign->variable = variable;
-    assign->value = value;
+// stmt_t * parse_stmt_id_decl(lexer_t * lex) {
+//     token_t * type = take_token(lex);
+//     token_t * variable = take_token(lex);
+//     enum TokenType next = take_token(lex)->token_type;
 
-    stmt_t * stmt = malloc(sizeof(stmt_assign_t));
-    stmt->tag = STMT_ASSIGN;
-    stmt->data = assign;
-    return stmt;
-}
+//     expr_t * value = (next == ASSIGN) ? parse_expr(lex) : NULL; 
+//     return create_id_decl_stmt(type, variable, value);
+// }
 
-stmt_t * create_id_decl_stmt(token_t * type, token_t * variable, expr_t * value) {
-    // value default to null 
-    stmt_id_decl_t id_decl = malloc(sizeof(stmt_assign_t));
-    id_decl->type = type;
-    id_decl->variable = variable;
-    id_decl->value = value;
+// stmt_t * parse_stmt_assign(lexer_t * lex) {
+//     token_t * variable = take_token(lex);
+//     take_token(lex); // take ASSIGN
+//     token_t * value = parse_expr(lex);
+//     take_token(lex); // take SEMI
+//     return create_assign_stmt(variable, value);
+// }
 
-    stmt_t * stmt = malloc(sizeof(stmt_assign_t));
-    stmt->tag = STMT_ID_DECL;
-    stmt->data = id_decl;
-    return stmt;
-}
+// stmt_t * create_assign_stmt(token_t * variable, expr_t * value) {
+//     stmt_assign_t assign = malloc(sizeof(stmt_assign_t));
+//     assign->variable = variable;
+//     assign->value = value;
 
-expr_t * parse_func_call_expr(lexer_t * lex) {
-    int arg_count = 0;
-    token_t * func_id = take_token(lex);
-    take_token(lex); // LPAR
-    expr_t * first_arg = parse_expr(lex);
-    expr_t ** args = malloc(50 * sizeof(expr_t *));
+//     stmt_t * stmt = malloc(sizeof(stmt_assign_t));
+//     stmt->tag = STMT_ASSIGN;
+//     stmt->data = assign;
+//     return stmt;
+// }
 
-    if (first_arg) {
-        args[arg_count] = first_arg;
-        arg_count++;
+// stmt_t * create_id_decl_stmt(token_t * type, token_t * variable, expr_t * value) {
+//     // value default to null 
+//     stmt_id_decl_t id_decl = malloc(sizeof(stmt_assign_t));
+//     id_decl->type = type;
+//     id_decl->variable = variable;
+//     id_decl->value = value;
+
+//     stmt_t * stmt = malloc(sizeof(stmt_assign_t));
+//     stmt->tag = STMT_ID_DECL;
+//     stmt->data = id_decl;
+//     return stmt;
+// }
+
+// expr_t * parse_func_call_expr(lexer_t * lex) {
+//     int arg_count = 0;
+//     token_t * func_id = take_token(lex);
+//     take_token(lex); // LPAR
+//     expr_t * first_arg = parse_expr(lex);
+//     expr_t ** args = malloc(50 * sizeof(expr_t *));
+
+//     if (first_arg) {
+//         args[arg_count] = first_arg;
+//         arg_count++;
         
-        token_t * next;
-        while ((next = take_token(lex)) != COMMA) {
-            if (arg_count >= 50) {
-                print("Function call may not exceed 50 arguments.")
-                exit(EXIT_FAILURE);
-            }
+//         token_t * next;
+//         while ((next = take_token(lex)) != COMMA) {
+//             if (arg_count >= 50) {
+//                 print("Function call may not exceed 50 arguments.")
+//                 exit(EXIT_FAILURE);
+//             }
 
-            args[arg_count] = parse_expr(lex);
-            arg_count++;
-        }
-    }
+//             args[arg_count] = parse_expr(lex);
+//             arg_count++;
+//         }
+//     }
 
-    expr_func_call_t * func_call = malloc(sizeof(expr_func_call_t));
-     * func_call = malloc(sizeof(expr_func_call_t));
+//     expr_func_call_t * func_call = malloc(sizeof(expr_func_call_t));
+//      * func_call = malloc(sizeof(expr_func_call_t));
 
 
 
     
-    take_token(lex); // RPAR
-}
+//     take_token(lex); // RPAR
+// }
+
+
+
+// ^^^^^^^^^^^^^^^^ In progress above ^^^^^^^^^^^^^^^^
+
+
+
+
+
 
 
 // void parse_if(char ** str, lexer_t lexer) { 
