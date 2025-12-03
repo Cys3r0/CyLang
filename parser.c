@@ -41,7 +41,7 @@ int precedence_of(enum TokenType token_type) {
 }
 
 enum ExprType { BINOP, UNARY, ATOM };
-enum ExprAtomType { EXPR_FUNC_ID, EXPR_NUMERAL, EXPR_ID };
+enum ExprAtomType { EXPR_FUNC_CALL, EXPR_NUMERAL, EXPR_ID };
 typedef struct expr expr_t;
 
 typedef struct {
@@ -58,6 +58,7 @@ typedef struct {
 typedef struct {
     token_t * func_id;
     expr_t ** args;
+    int arg_count;
 } expr_func_call_t;
 
 typedef struct {
@@ -73,13 +74,17 @@ struct expr {
     union {
         binop_t binop;
         unary_t unary;
+        // union {      //Implement this later
+        //     expr_func_call_t func_call;
+        //     token_t token;
+        // } atom;
         expr_atom_t atom;
     };
 };
 
 
 //TODO: 
-//Update atom exprs and check that it works
+//fix/debug  printing and parsing for func call expr
 //create a stmt type
 //test parser for the input ()
 //create a if, block, while, etc stmts.
@@ -208,7 +213,18 @@ expr_t * parse_expr(lexer_t * lex) {
 
 void print_expr_recursive(expr_t * expr, int level) {
     if (expr->tag == ATOM) {
-        printf("L%d atom: %s = %d\n", level, token_to_str(expr->atom.token.token_type), expr->atom.token.value);
+        if (expr->atom.tag == EXPR_FUNC_CALL) {
+            printf("L%d atom: FUNC_CALL = %s(", level, expr->atom.func_call.func_id->str);
+            for (int i = 0; i < expr->atom.func_call.arg_count+1; i++) {
+                printf("%d, ", expr->atom.func_call.args[i]->atom.token.value);
+                // printf("ARGCOUNT%d, ", expr->atom.func_call.arg_count);
+            }
+            
+            printf(")\n");
+        } else if (expr->tag == ATOM) {
+            printf("L%d atom: %s = %d\n", level, token_to_str(expr->atom.token.token_type), expr->atom.token.value);
+        }
+        
     } else if (expr->tag == BINOP) {
         printf("L%d binop: %s\n", level, token_to_str(expr->binop.op));
         print_expr_recursive(expr->binop.right, level+1);
@@ -223,9 +239,50 @@ void print_expr(expr_t * expr) {
     print_expr_recursive(expr, 0);
 }
 
+expr_t * parse_func_call_expr(lexer_t * lex) {
+    int arg_count = 0;
+    token_t * func_id = take_token(lex);
+    take_token(lex); // LPAR
+    expr_t * first_arg = parse_expr(lex);
+    expr_t ** args = malloc(50 * sizeof(expr_t *));
+    
+    if (first_arg) {
+        args[arg_count] = first_arg;
+        arg_count++;
+        
+        token_t * next;
+        while ((next = take_token(lex))->token_type != COMMA) {
+            if (arg_count >= 50) {
+                printf("Function call may not exceed 50 arguments.");
+                exit(EXIT_FAILURE);
+            }
+            
+            args[arg_count] = parse_expr(lex);
+            arg_count++;
+        }
+    }
+    
+    take_token(lex); // RPAR
+
+    expr_func_call_t func_call;
+    func_call.func_id = func_id;
+    func_call.args = args;
+    func_call.arg_count = arg_count;
+
+    expr_atom_t func_call_atom;
+    func_call_atom.tag = EXPR_FUNC_CALL;
+    func_call_atom.func_call = func_call;
+
+    expr_t * exp = malloc(sizeof(expr_t));
+    exp->tag = ATOM;
+    exp->atom = func_call_atom;
+
+    return exp;
+}
 
 int main(int argc, char const *argv[]) {
-    char * file_text = "---4;";
+    char * file_text = "func(1, 2)";
+
 
     regex_t regex;
     regmatch_t m[NUMBER_OF_TOKENS + 1];
@@ -237,24 +294,20 @@ int main(int argc, char const *argv[]) {
         printf("%s ", token_to_str(peak_n_tokens(i + 1, lex)));
     }
     printf("\n");
+    expr_t * e = parse_func_call_expr(lex);
     
-    expr_t * e = parse_expr(lex);
+    
+    // expr_t * e = parse_expr(lex);
     print_expr(e);
     return 0;
 }
 
 
+
+
 // enum StmtType { STMT_IF, STMT_ID_DECL, STMT_ASSIGN };
 
-// typedef struct {
-//     enum StmtType tag;
-//     union {
-//         stmt_if_t * stmt_if;
-//         stmt_id_decl_t * stmt_id_decl;
-//         stmt_assign_t * stmt_assign;
-
-//     } data;
-// } stmt_t;
+// typedef struct stmt stmt_t;
 
 // typedef struct {
 //     expr_t * condition;
@@ -272,7 +325,18 @@ int main(int argc, char const *argv[]) {
 // typedef struct {
 //     token_t * variable;
 //     expr_t * value;
-// } stmt_id_decl_t;
+// } stmt_assign_t;
+
+
+// struct stmt {
+//     enum StmtType tag;
+//     union {
+//         stmt_if_t * stmt_if;
+//         stmt_id_decl_t * stmt_id_decl;
+//         stmt_assign_t * stmt_assign;
+
+//     } data;    
+// };    
 
 
 // stmt_t * parse_stmt_id_decl(lexer_t * lex) {
@@ -316,37 +380,6 @@ int main(int argc, char const *argv[]) {
 //     return stmt;
 // }
 
-// expr_t * parse_func_call_expr(lexer_t * lex) {
-//     int arg_count = 0;
-//     token_t * func_id = take_token(lex);
-//     take_token(lex); // LPAR
-//     expr_t * first_arg = parse_expr(lex);
-//     expr_t ** args = malloc(50 * sizeof(expr_t *));
-
-//     if (first_arg) {
-//         args[arg_count] = first_arg;
-//         arg_count++;
-        
-//         token_t * next;
-//         while ((next = take_token(lex)) != COMMA) {
-//             if (arg_count >= 50) {
-//                 print("Function call may not exceed 50 arguments.")
-//                 exit(EXIT_FAILURE);
-//             }
-
-//             args[arg_count] = parse_expr(lex);
-//             arg_count++;
-//         }
-//     }
-
-//     expr_func_call_t * func_call = malloc(sizeof(expr_func_call_t));
-//      * func_call = malloc(sizeof(expr_func_call_t));
-
-
-
-    
-//     take_token(lex); // RPAR
-// }
 
 
 
