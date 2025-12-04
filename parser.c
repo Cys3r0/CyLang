@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#define MAX_ARGS 64
+
 enum ExprType { EXPR_BINOP, EXPR_UNARY, EXPR_FUNC_CALL, EXPR_NUMERAL, EXPR_ID };
 
 int is_binop(enum TokenType token_type) {
@@ -90,6 +92,9 @@ struct expr {
 //use a ¤ as a pointer deref.
 //Figure out how to propagate error messages
 //skip_token take wrapper? 
+
+// LATER:
+//create unit tests for scanner/parser
 
 
 
@@ -243,26 +248,36 @@ expr_t * parse_expr_func_call(lexer_t * lex) {
     int arg_len = 0;
     token_t * func_id = take_token(lex);
     take_token(lex); // LPAR
-    expr_t * first_arg = parse_expr(lex);
-    expr_t ** args = malloc(50 * sizeof(expr_t *));
+    token_t * next;
+    expr_t ** args = NULL;
+
     
-    if (first_arg) {
+    if (peak_token(lex) != TOKEN_RPAR) {
+        args = malloc(MAX_ARGS * sizeof(expr_t *));
+        expr_t * first_arg = parse_expr(lex);
+        
         args[arg_len] = first_arg;
         arg_len++;
         
-        token_t * next;
-        while ((next = take_token(lex))->token_type != TOKEN_COMMA) {
-            if (arg_len >= 50) {
-                printf("Function call may not exceed 50 arguments.");
+        while ((next = take_token(lex))->token_type == TOKEN_COMMA) {
+            
+            if (arg_len >= MAX_ARGS) {
+                printf("Function call may not exceed MAX_ARGS arguments.");
                 exit(EXIT_FAILURE);
             }
             
             args[arg_len] = parse_expr(lex);
             arg_len++;
         }
+
+        for (int i = 0; i < arg_len; i++) {
+            printf("Value at args[%d]: %d\n", arg_len, args[i]->numeral.value);
+        }
+        
     }
     
-    take_token(lex); // RPAR
+    if (next->token_type != TOKEN_RPAR) 
+        printf("Did not take \")\" as last token");
 
     expr_func_call_t func_call;
     func_call.func_id = func_id;
@@ -277,7 +292,7 @@ expr_t * parse_expr_func_call(lexer_t * lex) {
 }
 
 int main(int argc, char const *argv[]) {
-    char * file_text = "func(1, 2)";
+    char * file_text = "func(1, 2, 4, 5, 6, 2, 4, 5, 6, 6, 2)";
 
 
     regex_t regex;
@@ -292,9 +307,22 @@ int main(int argc, char const *argv[]) {
     printf("\n");
     expr_t * e = parse_expr_func_call(lex);
     
+    printf("arg_len := %d \n", e->func_call.arg_len);
+    printf("function: %s(", e->func_call.func_id->str);
+    if (e->func_call.arg_len > 0) {
+        printf("%d", e->func_call.args[0]->numeral.value);
+        for (int i = 1; i < e->func_call.arg_len; i++) {
+            printf(", %d", e->func_call.args[i]->numeral.value);
+        }
+    }
     
+    printf(")\n");
+
+    // printf("arg_len := %d \n", e->func_call.arg_len);
+
+
     // expr_t * e = parse_expr(lex);
-    print_expr(e);
+    // print_expr(e);
     return 0;
 }
 
