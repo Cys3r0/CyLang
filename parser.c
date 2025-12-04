@@ -6,25 +6,25 @@ enum ExprType { EXPR_BINOP, EXPR_UNARY, EXPR_FUNC_CALL, EXPR_NUMERAL, EXPR_ID };
 
 int is_binop(enum TokenType token_type) {
     //works for now
-    int ret = token_type == ADD
-            || token_type == MUL
-            || token_type == SUB
-            || token_type == DIV
-            || token_type == MOD
-            || token_type == EXPONENT;
+    int ret = token_type == TOKEN_ADD
+            || token_type == TOKEN_MUL
+            || token_type == TOKEN_SUB
+            || token_type == TOKEN_DIV
+            || token_type == TOKEN_MOD
+            || token_type == TOKEN_EXPONENT;
     return ret;
 }
 
 int is_right_associative(enum TokenType token_type) {
     //works for now
-    int ret = token_type == EXPONENT;
+    int ret = token_type == TOKEN_EXPONENT;
     return ret;
 }
 
 int is_unary(enum TokenType token_type) {
     //works for now
-    int ret = token_type == SUB
-            || token_type == ADD;
+    int ret = token_type == TOKEN_SUB
+            || token_type == TOKEN_ADD;
     return ret;
 }
 
@@ -36,12 +36,12 @@ int is_atom(enum ExprType type) {
 
 int precedence_of(enum TokenType token_type) {
     switch (token_type){
-        case ADD:      return 1;
-        case SUB:      return 1;
-        case MUL:      return 2;
-        case DIV:      return 2;
-        case MOD:      return 2;
-        case EXPONENT: return 3;
+        case TOKEN_ADD:      return 1;
+        case TOKEN_SUB:      return 1;
+        case TOKEN_MUL:      return 2;
+        case TOKEN_DIV:      return 2;
+        case TOKEN_MOD:      return 2;
+        case TOKEN_EXPONENT: return 3;
         default: return -1;
     }
 }
@@ -80,12 +80,12 @@ struct expr {
 
 
 //TODO: 
-//fix/debug  printing and parsing for func call expr
+//fix/debug printing and parsing from parse_expr_func_call
+//rename token enum to TOKEN_[token type], example differentiate ASSIGN from STMT_ASSIGN
 //create a parse_operand_expr for handling all atoms
 //create a stmt type
 //test parser for the input ()
 //create a if, block, while, etc stmts.
-//rename token enum to TOK_[token type] to differentiate ASSIGN from STMT_ASSIGN
 //add IDs and func calls. parse_atom?
 //use a ¤ as a pointer deref.
 //Figure out how to propagate error messages
@@ -130,11 +130,11 @@ expr_t * create_unary_expr(enum TokenType op, expr_t * inner) {
 
 expr_t * create_atom_expr(token_t * tok) {
     expr_t * exp = malloc(sizeof(expr_t));
-    if (tok->token_type == ID) {
+    if (tok->token_type == TOKEN_ID) {
         exp->tag = EXPR_ID;
         exp->id = *tok;
 
-    } else if (tok->token_type == NUM) {
+    } else if (tok->token_type == TOKEN_NUM) {
         exp->tag = EXPR_NUMERAL;
         exp->numeral = *tok;
     }
@@ -154,7 +154,7 @@ expr_t * parse_expr_paran(lexer_t * lex) {
 expr_t * parse_expr_unary(enum TokenType tok_type, lexer_t * lex) {
     expr_t * inner;
     token_t * next = take_token(lex);
-    if (next->token_type == LPAR) {
+    if (next->token_type == TOKEN_LPAR) {
         inner = parse_expr_paran(lex);
     } else if (is_unary(next->token_type)){
         inner = parse_expr_unary(tok_type, lex);
@@ -171,10 +171,11 @@ expr_t * parse_expr_recursive(expr_t * lhs, int min_precedence, lexer_t * lex, e
 
     while (is_binop(*lookahead) && precedence_of(*lookahead) >= min_precedence) {
         enum TokenType op = take_token(lex)->token_type; 
-        token_t * next = take_token(lex); // ?check if take_token is numeral?
+        token_t * next = take_token(lex);
         expr_t * rhs;
 
-        if (next->token_type == LPAR) {
+        // This should be a parse_operand function
+        if (next->token_type == TOKEN_LPAR) {
             rhs = parse_expr_paran(lex);
         } else if (is_unary(next->token_type)) {
             rhs = parse_expr_unary(next->token_type, lex);
@@ -201,7 +202,7 @@ expr_t * parse_expr(lexer_t * lex) {
     token_t * next = take_token(lex);
     expr_t * expr;
 
-    if (next->token_type == LPAR) {
+    if (next->token_type == TOKEN_LPAR) {
         expr = parse_expr_paran(lex);
     } else if (is_unary(next->token_type)) {
         expr = parse_expr_unary(next->token_type, lex);
@@ -219,7 +220,6 @@ void print_expr_recursive(expr_t * expr, int level) {
             // printf("%d, ", expr->func_call.args[i]->numeral.value);
             printf("(((ARGCOUNT%d, )))", expr->func_call.arg_len);
         }
-        
         // printf(")\n");
     } else if (expr->tag == EXPR_NUMERAL) {
         printf("L%d atom: %s = %d\n", level, token_to_str(expr->numeral.token_type), expr->numeral.value);
@@ -239,7 +239,7 @@ void print_expr(expr_t * expr) {
     print_expr_recursive(expr, 0);
 }
 
-expr_t * parse_func_call_expr(lexer_t * lex) {
+expr_t * parse_expr_func_call(lexer_t * lex) {
     int arg_len = 0;
     token_t * func_id = take_token(lex);
     take_token(lex); // LPAR
@@ -251,7 +251,7 @@ expr_t * parse_func_call_expr(lexer_t * lex) {
         arg_len++;
         
         token_t * next;
-        while ((next = take_token(lex))->token_type != COMMA) {
+        while ((next = take_token(lex))->token_type != TOKEN_COMMA) {
             if (arg_len >= 50) {
                 printf("Function call may not exceed 50 arguments.");
                 exit(EXIT_FAILURE);
@@ -290,7 +290,7 @@ int main(int argc, char const *argv[]) {
         printf("%s ", token_to_str(peak_n_tokens(i + 1, lex)));
     }
     printf("\n");
-    expr_t * e = parse_func_call_expr(lex);
+    expr_t * e = parse_expr_func_call(lex);
     
     
     // expr_t * e = parse_expr(lex);

@@ -51,33 +51,33 @@ const char * REGEX_RULES =
 
 char * token_to_str(enum TokenType token_type) {
     switch (token_type) {
-        case SEMI: return "SEMI";
-        case ASSIGN: return "ASSIGN";
-        case COMMA: return "COMMA";
-        case LPAR: return "LPAR";
-        case RPAR: return "RPAR";
-        case LWING: return "LWING";
-        case RWING: return "RWING";
-        case LBRACKET: return "LBRACKET";
-        case RBRACKET: return "RBRACKET";
-        case ADD: return "ADD";
-        case SUB: return "SUB";
-        case MUL: return "MUL";
-        case DIV: return "DIV";
-        case MOD: return "MOD";
-        case EQ: return "EQ";
-        case NEQ: return "NEQ";
-        case LT: return "LT";
-        case LEQ: return "LEQ";
-        case GT: return "GT";
-        case GEQ: return "GEQ";
-        case IF: return "IF";
-        case WHILE: return "WHILE";
-        case ID: return "ID";
-        case NUM: return "NUM";
-        case EXPONENT: return "EXPONENT";
-        case WHITESPACE: return "WHITESPACE";
-        case NEWLINE: return "NEWLINE";
+        case TOKEN_SEMI: return "SEMI";
+        case TOKEN_ASSIGN: return "ASSIGN";
+        case TOKEN_COMMA: return "COMMA";
+        case TOKEN_LPAR: return "LPAR";
+        case TOKEN_RPAR: return "RPAR";
+        case TOKEN_LWING: return "LWING";
+        case TOKEN_RWING: return "RWING";
+        case TOKEN_LBRACKET: return "LBRACKET";
+        case TOKEN_RBRACKET: return "RBRACKET";
+        case TOKEN_ADD: return "ADD";
+        case TOKEN_SUB: return "SUB";
+        case TOKEN_MUL: return "MUL";
+        case TOKEN_DIV: return "DIV";
+        case TOKEN_MOD: return "MOD";
+        case TOKEN_EQ: return "EQ";
+        case TOKEN_NEQ: return "NEQ";
+        case TOKEN_LT: return "LT";
+        case TOKEN_LEQ: return "LEQ";
+        case TOKEN_GT: return "GT";
+        case TOKEN_GEQ: return "GEQ";
+        case TOKEN_IF: return "IF";
+        case TOKEN_WHILE: return "WHILE";
+        case TOKEN_ID: return "ID";
+        case TOKEN_NUM: return "NUM";
+        case TOKEN_EXPONENT: return "EXPONENT";
+        case TOKEN_WHITESPACE: return "WHITESPACE";
+        case TOKEN_NEWLINE: return "NEWLINE";
         default: return "NONE";
     }
 }
@@ -145,31 +145,31 @@ enum TokenType peak_n_tokens(int lookahead, lexer_t * lex) {
         temp_str += m[0].rm_eo - m[0].rm_so;
     }
 
-    if (m[SEMI].rm_so != -1)     return SEMI;
-    if (m[ASSIGN].rm_so != -1)   return ASSIGN;
-    if (m[COMMA].rm_so != -1)    return COMMA;
-    if (m[LPAR].rm_so != -1)     return LPAR;
-    if (m[RPAR].rm_so != -1)     return RPAR;
-    if (m[LWING].rm_so != -1)    return LWING;
-    if (m[RWING].rm_so != -1)    return RWING;
-    if (m[LBRACKET].rm_so != -1) return LBRACKET;
-    if (m[RBRACKET].rm_so != -1) return RBRACKET;
-    if (m[ADD].rm_so != -1)      return ADD;
-    if (m[SUB].rm_so != -1)      return SUB;
-    if (m[MUL].rm_so != -1)      return MUL;
-    if (m[DIV].rm_so != -1)      return DIV;
-    if (m[MOD].rm_so != -1)      return MOD;
-    if (m[EQ].rm_so != -1)       return EQ;
-    if (m[NEQ].rm_so != -1)      return NEQ;
-    if (m[LT].rm_so != -1)       return LT;
-    if (m[LEQ].rm_so != -1)      return LEQ;
-    if (m[GT].rm_so != -1)       return GT;
-    if (m[GEQ].rm_so != -1)      return GEQ;
-    if (m[IF].rm_so != -1)       return IF;
-    if (m[WHILE].rm_so != -1)    return WHILE;
-    if (m[ID].rm_so != -1)       return ID;
-    if (m[NUM].rm_so != -1)      return NUM;
-    if (m[EXPONENT].rm_so != -1) return EXPONENT;
+    if (m[TOKEN_SEMI].rm_so != -1)     return TOKEN_SEMI;
+    if (m[TOKEN_ASSIGN].rm_so != -1)   return TOKEN_ASSIGN;
+    if (m[TOKEN_COMMA].rm_so != -1)    return TOKEN_COMMA;
+    if (m[TOKEN_LPAR].rm_so != -1)     return TOKEN_LPAR;
+    if (m[TOKEN_RPAR].rm_so != -1)     return TOKEN_RPAR;
+    if (m[TOKEN_LWING].rm_so != -1)    return TOKEN_LWING;
+    if (m[TOKEN_RWING].rm_so != -1)    return TOKEN_RWING;
+    if (m[TOKEN_LBRACKET].rm_so != -1) return TOKEN_LBRACKET;
+    if (m[TOKEN_RBRACKET].rm_so != -1) return TOKEN_RBRACKET;
+    if (m[TOKEN_ADD].rm_so != -1)      return TOKEN_ADD;
+    if (m[TOKEN_SUB].rm_so != -1)      return TOKEN_SUB;
+    if (m[TOKEN_MUL].rm_so != -1)      return TOKEN_MUL;
+    if (m[TOKEN_DIV].rm_so != -1)      return TOKEN_DIV;
+    if (m[TOKEN_MOD].rm_so != -1)      return TOKEN_MOD;
+    if (m[TOKEN_EQ].rm_so != -1)       return TOKEN_EQ;
+    if (m[TOKEN_NEQ].rm_so != -1)      return TOKEN_NEQ;
+    if (m[TOKEN_LT].rm_so != -1)       return TOKEN_LT;
+    if (m[TOKEN_LEQ].rm_so != -1)      return TOKEN_LEQ;
+    if (m[TOKEN_GT].rm_so != -1)       return TOKEN_GT;
+    if (m[TOKEN_GEQ].rm_so != -1)      return TOKEN_GEQ;
+    if (m[TOKEN_IF].rm_so != -1)       return TOKEN_IF;
+    if (m[TOKEN_WHILE].rm_so != -1)    return TOKEN_WHILE;
+    if (m[TOKEN_ID].rm_so != -1)       return TOKEN_ID;
+    if (m[TOKEN_NUM].rm_so != -1)      return TOKEN_NUM;
+    if (m[TOKEN_EXPONENT].rm_so != -1) return TOKEN_EXPONENT;
     return -1;  
 }
 
@@ -202,82 +202,82 @@ token_t * take_token(lexer_t * lex) {
     }
 
     int token_len = m[0].rm_eo - m[0].rm_so;
-    if (m[SEMI].rm_so != -1) { 
-        token_type = SEMI;
+    if (m[TOKEN_SEMI].rm_so != -1) { 
+        token_type = TOKEN_SEMI;
     }
-    else if (m[ASSIGN].rm_so != -1) { 
-        token_type = ASSIGN;
+    else if (m[TOKEN_ASSIGN].rm_so != -1) { 
+        token_type = TOKEN_ASSIGN;
     }
-    else if (m[COMMA].rm_so != -1) { 
-        token_type = COMMA;
+    else if (m[TOKEN_COMMA].rm_so != -1) { 
+        token_type = TOKEN_COMMA;
     }
-    else if (m[LPAR].rm_so != -1) { 
-        token_type = LPAR;
+    else if (m[TOKEN_LPAR].rm_so != -1) { 
+        token_type = TOKEN_LPAR;
     }
-    else if (m[RPAR].rm_so != -1) { 
-        token_type = RPAR;
+    else if (m[TOKEN_RPAR].rm_so != -1) { 
+        token_type = TOKEN_RPAR;
     }
-    else if (m[LWING].rm_so != -1) { 
-        token_type = LWING;
+    else if (m[TOKEN_LWING].rm_so != -1) { 
+        token_type = TOKEN_LWING;
     }
-    else if (m[RWING].rm_so != -1) { 
-        token_type = RWING;
+    else if (m[TOKEN_RWING].rm_so != -1) { 
+        token_type = TOKEN_RWING;
     }
-    else if (m[LBRACKET].rm_so != -1) { 
-        token_type = LBRACKET;
+    else if (m[TOKEN_LBRACKET].rm_so != -1) { 
+        token_type = TOKEN_LBRACKET;
     }
-    else if (m[RBRACKET].rm_so != -1) { 
-        token_type = RBRACKET;
+    else if (m[TOKEN_RBRACKET].rm_so != -1) { 
+        token_type = TOKEN_RBRACKET;
     }
-    else if (m[ADD].rm_so != -1) {
-        token_type = ADD;
+    else if (m[TOKEN_ADD].rm_so != -1) {
+        token_type = TOKEN_ADD;
     }
-    else if (m[SUB].rm_so != -1) {
-        token_type = SUB;
+    else if (m[TOKEN_SUB].rm_so != -1) {
+        token_type = TOKEN_SUB;
     }
-    else if (m[MUL].rm_so != -1) {
-        token_type = MUL; 
+    else if (m[TOKEN_MUL].rm_so != -1) {
+        token_type = TOKEN_MUL; 
     }
-    else if (m[DIV].rm_so != -1) {
-        token_type = DIV;
+    else if (m[TOKEN_DIV].rm_so != -1) {
+        token_type = TOKEN_DIV;
     }
-    else if (m[MOD].rm_so != -1) {
-        token_type = MOD;
+    else if (m[TOKEN_MOD].rm_so != -1) {
+        token_type = TOKEN_MOD;
     }
-    else if (m[EQ].rm_so != -1) {
-        token_type = EQ;
+    else if (m[TOKEN_EQ].rm_so != -1) {
+        token_type = TOKEN_EQ;
     }
-    else if (m[NEQ].rm_so != -1) {
-        token_type = NEQ;
+    else if (m[TOKEN_NEQ].rm_so != -1) {
+        token_type = TOKEN_NEQ;
     }
-    else if (m[LT].rm_so != -1) {
-        token_type = LT;
+    else if (m[TOKEN_LT].rm_so != -1) {
+        token_type = TOKEN_LT;
     }
-    else if (m[LEQ].rm_so != -1) {
-        token_type = LEQ;
+    else if (m[TOKEN_LEQ].rm_so != -1) {
+        token_type = TOKEN_LEQ;
     }
-    else if (m[GT].rm_so != -1) {
-        token_type = GT;
+    else if (m[TOKEN_GT].rm_so != -1) {
+        token_type = TOKEN_GT;
     }
-    else if (m[GEQ].rm_so != -1) {
-        token_type = GEQ;
+    else if (m[TOKEN_GEQ].rm_so != -1) {
+        token_type = TOKEN_GEQ;
     }
-    else if (m[IF].rm_so != -1) {
-        token_type = IF;
+    else if (m[TOKEN_IF].rm_so != -1) {
+        token_type = TOKEN_IF;
     }
-    else if (m[WHILE].rm_so != -1) {
-        token_type = WHILE;
+    else if (m[TOKEN_WHILE].rm_so != -1) {
+        token_type = TOKEN_WHILE;
     }
-    else if (m[ID].rm_so != -1) { 
-        token_type = ID;
+    else if (m[TOKEN_ID].rm_so != -1) { 
+        token_type = TOKEN_ID;
         s = malloc(token_len + 1); 
         for (int i = 0; i < token_len; i++) 
             s[i] = lex->file_text[i];  // Optimize!!!
         
         s[token_len] = '\0';
     }
-    else if (m[NUM].rm_so != -1) { 
-        token_type = NUM;
+    else if (m[TOKEN_NUM].rm_so != -1) { 
+        token_type = TOKEN_NUM;
         char * value_s = malloc(token_len + 1);
         for (int i = 0; i < token_len; i++) 
             value_s[i] = lex->file_text[i];  // Optimize!!!!    
@@ -285,15 +285,15 @@ token_t * take_token(lexer_t * lex) {
         value_s[token_len] = '\0';
         value = atoi(value_s);
     }
-    else if (m[EXPONENT].rm_so != -1) {
-        token_type = EXPONENT;
+    else if (m[TOKEN_EXPONENT].rm_so != -1) {
+        token_type = TOKEN_EXPONENT;
     }
-    else if (m[WHITESPACE].rm_so != -1) {
-        token_type = WHITESPACE;
+    else if (m[TOKEN_WHITESPACE].rm_so != -1) {
+        token_type = TOKEN_WHITESPACE;
         lex->col += m[0].rm_eo - m[0].rm_so;
     }
-    else if (m[NEWLINE].rm_so != -1) {
-        token_type = NEWLINE;
+    else if (m[TOKEN_NEWLINE].rm_so != -1) {
+        token_type = TOKEN_NEWLINE;
         lex->line++;
         lex->col = 1;
     }
