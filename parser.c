@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+enum ExprType { EXPR_BINOP, EXPR_UNARY, EXPR_FUNC_CALL, EXPR_NUMERAL, EXPR_ID };
+
 int is_binop(enum TokenType token_type) {
     //works for now
     int ret = token_type == ADD
@@ -26,7 +28,11 @@ int is_unary(enum TokenType token_type) {
     return ret;
 }
 
-int is_atom(enum TokenType token_type) ;
+int is_atom(enum ExprType type) {
+    return type == EXPR_NUMERAL
+            || type == EXPR_ID
+            || type == EXPR_FUNC_CALL;
+}
 
 int precedence_of(enum TokenType token_type) {
     switch (token_type){
@@ -40,8 +46,6 @@ int precedence_of(enum TokenType token_type) {
     }
 }
 
-enum ExprType { BINOP, UNARY, ATOM };
-enum ExprAtomType { EXPR_FUNC_CALL, EXPR_NUMERAL, EXPR_ID };
 typedef struct expr expr_t;
 
 typedef struct {
@@ -58,33 +62,26 @@ typedef struct {
 typedef struct {
     token_t * func_id;
     expr_t ** args;
-    int arg_count;
+    int arg_len;
 } expr_func_call_t;
 
-typedef struct {
-    enum ExprAtomType tag;
-    union {
-        token_t token;
-        expr_func_call_t func_call;
-    };
-} expr_atom_t; 
+
 
 struct expr {
     enum ExprType tag;
     union {
         binop_t binop;
         unary_t unary;
-        // union {      //Implement this later
-        //     expr_func_call_t func_call;
-        //     token_t token;
-        // } atom;
-        expr_atom_t atom;
+        token_t id;
+        token_t numeral;
+        expr_func_call_t func_call;
     };
 };
 
 
 //TODO: 
 //fix/debug  printing and parsing for func call expr
+//create a parse_operand_expr for handling all atoms
 //create a stmt type
 //test parser for the input ()
 //create a if, block, while, etc stmts.
@@ -98,9 +95,12 @@ struct expr {
 
 char * expr_tag_to_str(enum ExprType tag) {
     switch (tag) {
-        case ATOM: return "ATOM";
-        case BINOP: return "BINOP";
-        default: return "ERROR: NOT ATOM OR BINOP";
+        case EXPR_UNARY:     return "EXPR_UNARY";
+        case EXPR_FUNC_CALL: return "EXPR_FUNC_CALL";
+        case EXPR_NUMERAL:   return "EXPR_NUMERAL";
+        case EXPR_ID:        return "EXPR_ID";
+        case EXPR_BINOP:     return "EXPR_BINOP";
+        default:             return "ERROR: NOT ATOM OR EXPR_BINOP";
     }
 }
 
@@ -111,7 +111,7 @@ expr_t * create_binop_expr(enum TokenType op, expr_t * left, expr_t * right) {
     bin.right = right;
     
     expr_t * expr = malloc(sizeof(expr_t));
-    expr->tag = BINOP;
+    expr->tag = EXPR_BINOP;
     expr->binop = bin;
     return expr;
 }
@@ -123,19 +123,22 @@ expr_t * create_unary_expr(enum TokenType op, expr_t * inner) {
     
     
     expr_t * ret_expr = malloc(sizeof(expr_t));
-    ret_expr->tag = UNARY;
+    ret_expr->tag = EXPR_UNARY;
     ret_expr->unary = unary;
     return ret_expr;
 }
 
 expr_t * create_atom_expr(token_t * tok) {
-    expr_atom_t atom;
-    atom.tag = EXPR_NUMERAL;
-    atom.token = *tok;
-
     expr_t * exp = malloc(sizeof(expr_t));
-    exp->tag = ATOM;
-    exp->atom = atom;
+    if (tok->token_type == ID) {
+        exp->tag = EXPR_ID;
+        exp->id = *tok;
+
+    } else if (tok->token_type == NUM) {
+        exp->tag = EXPR_NUMERAL;
+        exp->numeral = *tok;
+    }
+
     return exp;
 }
 
@@ -165,8 +168,6 @@ expr_t * parse_expr_unary(enum TokenType tok_type, lexer_t * lex) {
 expr_t * parse_expr_recursive(expr_t * lhs, int min_precedence, lexer_t * lex, enum TokenType * lookahead) {
     // pratt parsing pseudocode from wikipedia
     int right_assoc = 0;
-    *lookahead = peak_token(lex);
-    // printf("TokenType: %s, value: %d\n", token_to_str(lhs->token.token_type), lhs->token.value);
 
     while (is_binop(*lookahead) && precedence_of(*lookahead) >= min_precedence) {
         enum TokenType op = take_token(lex)->token_type; 
@@ -212,24 +213,23 @@ expr_t * parse_expr(lexer_t * lex) {
 }
 
 void print_expr_recursive(expr_t * expr, int level) {
-    if (expr->tag == ATOM) {
-        if (expr->atom.tag == EXPR_FUNC_CALL) {
-            printf("L%d atom: FUNC_CALL = %s(", level, expr->atom.func_call.func_id->str);
-            for (int i = 0; i < expr->atom.func_call.arg_count+1; i++) {
-                printf("%d, ", expr->atom.func_call.args[i]->atom.token.value);
-                // printf("ARGCOUNT%d, ", expr->atom.func_call.arg_count);
-            }
-            
-            printf(")\n");
-        } else if (expr->tag == ATOM) {
-            printf("L%d atom: %s = %d\n", level, token_to_str(expr->atom.token.token_type), expr->atom.token.value);
+    if (expr->tag == EXPR_FUNC_CALL) {
+        printf("L%d atom: FUNC_CALL = %s(", level, expr->func_call.func_id->str);
+        for (int i = 0; i < expr->func_call.arg_len; i++) {
+            // printf("%d, ", expr->func_call.args[i]->numeral.value);
+            printf("(((ARGCOUNT%d, )))", expr->func_call.arg_len);
         }
         
-    } else if (expr->tag == BINOP) {
+        // printf(")\n");
+    } else if (expr->tag == EXPR_NUMERAL) {
+        printf("L%d atom: %s = %d\n", level, token_to_str(expr->numeral.token_type), expr->numeral.value);
+    } else if (expr->tag == EXPR_ID) {
+        printf("L%d atom: %s = %s\n", level, token_to_str(expr->id.token_type), expr->id.str);
+    } else if (expr->tag == EXPR_BINOP) {
         printf("L%d binop: %s\n", level, token_to_str(expr->binop.op));
         print_expr_recursive(expr->binop.right, level+1);
         print_expr_recursive(expr->binop.left, level+1);
-    } else if (expr->tag == UNARY) {
+    } else if (expr->tag == EXPR_UNARY) {
         printf("L%d unary: %s\n", level, token_to_str(expr->unary.op));
         print_expr_recursive(expr->unary.inner, level+1);
     }
@@ -240,25 +240,25 @@ void print_expr(expr_t * expr) {
 }
 
 expr_t * parse_func_call_expr(lexer_t * lex) {
-    int arg_count = 0;
+    int arg_len = 0;
     token_t * func_id = take_token(lex);
     take_token(lex); // LPAR
     expr_t * first_arg = parse_expr(lex);
     expr_t ** args = malloc(50 * sizeof(expr_t *));
     
     if (first_arg) {
-        args[arg_count] = first_arg;
-        arg_count++;
+        args[arg_len] = first_arg;
+        arg_len++;
         
         token_t * next;
         while ((next = take_token(lex))->token_type != COMMA) {
-            if (arg_count >= 50) {
+            if (arg_len >= 50) {
                 printf("Function call may not exceed 50 arguments.");
                 exit(EXIT_FAILURE);
             }
             
-            args[arg_count] = parse_expr(lex);
-            arg_count++;
+            args[arg_len] = parse_expr(lex);
+            arg_len++;
         }
     }
     
@@ -267,15 +267,11 @@ expr_t * parse_func_call_expr(lexer_t * lex) {
     expr_func_call_t func_call;
     func_call.func_id = func_id;
     func_call.args = args;
-    func_call.arg_count = arg_count;
-
-    expr_atom_t func_call_atom;
-    func_call_atom.tag = EXPR_FUNC_CALL;
-    func_call_atom.func_call = func_call;
+    func_call.arg_len = arg_len;
 
     expr_t * exp = malloc(sizeof(expr_t));
-    exp->tag = ATOM;
-    exp->atom = func_call_atom;
+    exp->tag = EXPR_FUNC_CALL;
+    exp->func_call = func_call;
 
     return exp;
 }
