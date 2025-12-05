@@ -82,9 +82,7 @@ struct expr {
 
 
 //TODO: 
-//fix/debug printing and parsing from parse_expr_func_call
-//rename token enum to TOKEN_[token type], example differentiate ASSIGN from STMT_ASSIGN
-//create a parse_operand_expr for handling all atoms
+//test using func_calls as exprs
 //create a stmt type
 //test parser for the input ()
 //create a if, block, while, etc stmts.
@@ -95,7 +93,6 @@ struct expr {
 
 // LATER:
 //create unit tests for scanner/parser
-
 
 
 char * expr_tag_to_str(enum ExprType tag) {
@@ -121,18 +118,6 @@ expr_t * create_binop_expr(enum TokenType op, expr_t * left, expr_t * right) {
     return expr;
 }
 
-expr_t * create_unary_expr(enum TokenType op, expr_t * inner) {
-    unary_t unary;
-    unary.op = op;
-    unary.inner = inner;
-    
-    
-    expr_t * ret_expr = malloc(sizeof(expr_t));
-    ret_expr->tag = EXPR_UNARY;
-    ret_expr->unary = unary;
-    return ret_expr;
-}
-
 expr_t * create_atom_expr(token_t * tok) {
     expr_t * exp = malloc(sizeof(expr_t));
     if (tok->token_type == TOKEN_ID) {
@@ -148,7 +133,64 @@ expr_t * create_atom_expr(token_t * tok) {
 }
 
 
-expr_t * parse_expr(lexer_t * expr);
+expr_t * parse_expr(lexer_t * lex);
+
+expr_t * parse_expr_func_call(token_t * func_id, lexer_t * lex) {
+    int arg_len = 0;
+    take_token(lex); // LPAR
+    token_t * next;
+    expr_t ** args = NULL;
+
+    if (peak_token(lex) != TOKEN_RPAR) {
+        args = malloc(MAX_ARGS * sizeof(expr_t *));
+        expr_t * first_arg = parse_expr(lex);
+        
+        args[arg_len] = first_arg;
+        arg_len++;
+        
+        while ((next = take_token(lex))->token_type == TOKEN_COMMA) {
+            if (arg_len >= MAX_ARGS) {
+                printf("Function call may not exceed MAX_ARGS arguments.");
+                exit(EXIT_FAILURE);
+            }
+            
+            args[arg_len] = parse_expr(lex);
+            arg_len++;
+        }
+    }
+    
+    if (next->token_type != TOKEN_RPAR) 
+        printf("Did not take \")\" as last token");
+
+    expr_func_call_t func_call;
+    func_call.func_id = func_id;
+    func_call.args = args;
+    func_call.arg_len = arg_len;
+
+    expr_t * exp = malloc(sizeof(expr_t));
+    exp->tag = EXPR_FUNC_CALL;
+    exp->func_call = func_call;
+
+    return exp;
+}
+
+expr_t * parse_expr_atom(token_t * next, lexer_t * lex) {
+    expr_t * exp = malloc(sizeof(expr_t));
+
+    if (next->token_type == TOKEN_ID) {
+        if (peak_token(lex) == TOKEN_LPAR) {
+            exp = parse_expr_func_call(next, lex);
+        } else {
+            exp->tag = EXPR_ID;
+            exp->id = *next;
+        }
+    } else if (next->token_type == TOKEN_NUM) {
+        exp->tag = EXPR_NUMERAL;
+        exp->numeral = *next;
+    }
+    
+    return exp;
+}
 
 expr_t * parse_expr_paran(lexer_t * lex) {
     expr_t * inner = parse_expr(lex);
@@ -167,7 +209,31 @@ expr_t * parse_expr_unary(enum TokenType tok_type, lexer_t * lex) {
         // this should be a parse atom call instead or something
         inner = create_atom_expr(next);
     }
-    return create_unary_expr(tok_type, inner);
+
+    unary_t unary;
+    unary.op = tok_type;
+    unary.inner = inner;
+    
+    expr_t * exp = malloc(sizeof(expr_t));
+    exp->tag = EXPR_UNARY;
+    exp->unary = unary;
+
+    return exp;
+}
+
+
+expr_t * parse_expr_operand(token_t * next, lexer_t * lex) {
+    expr_t * operand;
+
+    if (next->token_type == TOKEN_LPAR) {
+        operand = parse_expr_paran(lex);
+    } else if (is_unary(next->token_type)) {
+        operand = parse_expr_unary(next->token_type, lex);
+    } else {
+        operand = parse_expr_atom(next, lex);    
+    }
+
+    return operand;
 }
 
 expr_t * parse_expr_recursive(expr_t * lhs, int min_precedence, lexer_t * lex, enum TokenType * lookahead) {
@@ -192,8 +258,8 @@ expr_t * parse_expr_recursive(expr_t * lhs, int min_precedence, lexer_t * lex, e
 
         while ((is_binop(*lookahead) && precedence_of(*lookahead) > precedence_of(op)) ||
                 (is_right_associative(*lookahead) && (right_assoc = precedence_of(*lookahead) == precedence_of(op)))) {
-            int inc = (right_assoc) ? 0 : 1;
 
+            int inc = (right_assoc) ? 0 : 1;
             rhs = parse_expr_recursive(rhs, precedence_of(op) + inc, lex, lookahead);
         }
 
@@ -207,14 +273,7 @@ expr_t * parse_expr(lexer_t * lex) {
     token_t * next = take_token(lex);
     expr_t * expr;
 
-    if (next->token_type == TOKEN_LPAR) {
-        expr = parse_expr_paran(lex);
-    } else if (is_unary(next->token_type)) {
-        expr = parse_expr_unary(next->token_type, lex);
-    } else {
-        expr = create_atom_expr(next);    
-    }
-
+    expr = parse_expr_operand(next, lex);
     return parse_expr_recursive(expr, 0, lex, &lookahead);
 }
 
@@ -244,55 +303,9 @@ void print_expr(expr_t * expr) {
     print_expr_recursive(expr, 0);
 }
 
-expr_t * parse_expr_func_call(lexer_t * lex) {
-    int arg_len = 0;
-    token_t * func_id = take_token(lex);
-    take_token(lex); // LPAR
-    token_t * next;
-    expr_t ** args = NULL;
-
-    
-    if (peak_token(lex) != TOKEN_RPAR) {
-        args = malloc(MAX_ARGS * sizeof(expr_t *));
-        expr_t * first_arg = parse_expr(lex);
-        
-        args[arg_len] = first_arg;
-        arg_len++;
-        
-        while ((next = take_token(lex))->token_type == TOKEN_COMMA) {
-            
-            if (arg_len >= MAX_ARGS) {
-                printf("Function call may not exceed MAX_ARGS arguments.");
-                exit(EXIT_FAILURE);
-            }
-            
-            args[arg_len] = parse_expr(lex);
-            arg_len++;
-        }
-
-        for (int i = 0; i < arg_len; i++) {
-            printf("Value at args[%d]: %d\n", arg_len, args[i]->numeral.value);
-        }
-        
-    }
-    
-    if (next->token_type != TOKEN_RPAR) 
-        printf("Did not take \")\" as last token");
-
-    expr_func_call_t func_call;
-    func_call.func_id = func_id;
-    func_call.args = args;
-    func_call.arg_len = arg_len;
-
-    expr_t * exp = malloc(sizeof(expr_t));
-    exp->tag = EXPR_FUNC_CALL;
-    exp->func_call = func_call;
-
-    return exp;
-}
 
 int main(int argc, char const *argv[]) {
-    char * file_text = "func(1, 2, 4, 5, 6, 2, 4, 5, 6, 6, 2)";
+    char * file_text = "2 * func(1, 2, 4, 5, 6, 2, 4, 5, 6, 6, 2)";
 
 
     regex_t regex;
@@ -305,7 +318,8 @@ int main(int argc, char const *argv[]) {
         printf("%s ", token_to_str(peak_n_tokens(i + 1, lex)));
     }
     printf("\n");
-    expr_t * e = parse_expr_func_call(lex);
+    token_t * next = take_token(lex);
+    expr_t * e = parse_expr_func_call(next, lex);
     
     printf("arg_len := %d \n", e->func_call.arg_len);
     printf("function: %s(", e->func_call.func_id->str);
