@@ -6,18 +6,16 @@
 
 
 
-//TODO: 
-//include a lookahead counter in lex to avoid passing a lookahead int.
-//add ELSE, EXPONENT, (LOGICAL) NOT AND OR, (BITWISE) NOT AND OR XOR BITSHIFTS, EXPONENT, INCREMENT, DECREMENT token
-//Create EOF-token at end of file
-
 
 // LATER:
-// Optimize the string
+// memoize peak_n_tokens
+// add a skip_token that doesn't create a token_t object but removes form lex->file_text
+// add ELSE, EXPONENT, (LOGICAL) NOT AND OR, (BITWISE) NOT AND OR XOR BITSHIFTS, INCREMENT, DECREMENT tokens
+// Create EOF-token at end of file
 // Include a python style "pass" keyword
 
 
-const int NUMBER_OF_TOKENS = 26;
+const int NUMBER_OF_TOKENS = TOKEN_NEWLINE;
 
 const char * REGEX_RULES = 
     "(;)"
@@ -138,7 +136,7 @@ enum TokenType peak_n_tokens(int lookahead, lexer_t * lex) {
         if (regexec(&lex->regex, temp_str, lex->rule_count + 1, m, 0) != 0) 
             return -1;
 
-        uint valid = !(m[25].rm_so != -1 || m[26].rm_so != -1);
+        uint valid = !(m[TOKEN_WHITESPACE].rm_so != -1 || m[TOKEN_NEWLINE].rm_so != -1);
         if (valid) 
             valid_count++;
 
@@ -189,11 +187,11 @@ token_t * take_token(lexer_t * lex) {
             exit(EXIT_FAILURE);
         }
         
-        invalid = (m[25].rm_so != -1 || m[26].rm_so != -1);
+        invalid = (m[TOKEN_WHITESPACE].rm_so != -1 || m[TOKEN_NEWLINE].rm_so != -1);
         if (invalid) {
-            if (m[25].rm_so != -1) {
+            if (m[TOKEN_WHITESPACE].rm_so != -1) {
                 lex->col += m[0].rm_eo - m[0].rm_so;
-            } else if (m[26].rm_so != -1) {
+            } else if (m[TOKEN_NEWLINE].rm_so != -1) {
                 lex->line++;
                 lex->col = 1;
             }
