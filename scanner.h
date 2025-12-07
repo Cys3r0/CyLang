@@ -71,35 +71,3 @@ enum TokenType peak_n_tokens(int lookahead, lexer_t * lex);
 
 token_t * take_token(lexer_t * lexer);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

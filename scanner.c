@@ -14,6 +14,8 @@
 // add ELSE, EXPONENT, (LOGICAL) NOT AND OR, (BITWISE) NOT AND OR XOR BITSHIFTS, INCREMENT, DECREMENT tokens
 // Create EOF-token at end of file
 // Include a python style "pass" keyword
+// Create own scanner
+
 
 
 const int NUMBER_OF_TOKENS = TOKEN_NEWLINE;
