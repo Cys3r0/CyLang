@@ -9,6 +9,7 @@
 
 // LATER:
 // memoize peak_n_tokens
+// add a take_token_specifc, which takes expects a certain token which is passed to it (or include this in skip_token)
 // add a skip_token that doesn't create a token_t object but removes form lex->file_text
 // add ELSE, EXPONENT, (LOGICAL) NOT AND OR, (BITWISE) NOT AND OR XOR BITSHIFTS, INCREMENT, DECREMENT tokens
 // Create EOF-token at end of file
@@ -39,6 +40,8 @@ const char * REGEX_RULES =
     "|(>)"
     "|(>=)"
     "|(if)"
+    "|(else)"
+    "|(return)"
     "|(while)"
     "|([a-zA-Z][a-zA-Z0-9]*)"
     "|([0-9]+)"
@@ -70,6 +73,8 @@ char * token_to_str(enum TokenType token_type) {
         case TOKEN_GT: return "GT";
         case TOKEN_GEQ: return "GEQ";
         case TOKEN_IF: return "IF";
+        case TOKEN_ELSE: return "ELSE";
+        case TOKEN_RETURN: return "RETURN";
         case TOKEN_WHILE: return "WHILE";
         case TOKEN_ID: return "ID";
         case TOKEN_NUM: return "NUM";

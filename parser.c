@@ -67,8 +67,6 @@ typedef struct {
     int arg_len;
 } expr_func_call_t;
 
-
-
 struct expr {
     enum ExprType tag;
     union {
@@ -330,85 +328,208 @@ int main(int argc, char const *argv[]) {
 
 
 
-// enum StmtType { STMT_IF, STMT_ID_DECL, STMT_ASSIGN };
+enum StmtType { STMT_IF, STMT_ID_DECL, STMT_ASSIGN, STMT_FUNC_CALL, STMT_WHILE, STMT_RETURN};
+typedef struct stmt stmt_t;
 
-// typedef struct stmt stmt_t;
+typedef struct {
+    expr_t * cond;
+    stmt_t ** then;
+    stmt_t ** or_else;
+} stmt_if_t;
 
-// typedef struct {
-//     expr_t * condition;
-//     stmt_t ** then;
-//     stmt_t ** else_;
-// } stmt_if_t;
+typedef struct {
+    token_t * type;
+    token_t * variable;
+    expr_t * value;
+} stmt_id_decl_t;
+
+typedef struct {
+    token_t * variable;
+    expr_t * value;
+} stmt_assign_t;
+
+typedef struct {
+    expr_t * cond;
+    stmt_t ** block;
+} stmt_while_t;
+
+struct stmt {
+    enum StmtType tag;
+    union {
+        stmt_if_t * stmt_if;
+        stmt_id_decl_t * stmt_id_decl;
+        stmt_assign_t * stmt_assign;
+        expr_t * func_call;
+        stmt_while_t * stmt_while;
+        expr_t * stmt_return;
+    };    
+};    
 
 
-// typedef struct {
-//     token_t * type;
-//     token_t * variable;
-//     expr_t * value;
-// } stmt_id_decl_t;
+stmt_t * parse_stmt(lexer_t * lex);
 
-// typedef struct {
-//     token_t * variable;
-//     expr_t * value;
-// } stmt_assign_t;
+stmt_t * parse_stmt_func_call(lexer_t * lex) {
+    token_t * next = take_token(lex);
+    expr_t * func_call = parse_expr_func_call(next, lex);
+    take_token(lex); //SEMI
+    
+    stmt_t * stmt = malloc(sizeof(stmt_t));
+    stmt->tag = STMT_FUNC_CALL;
+    stmt->func_call = func_call;
+    return stmt;
+}
+
+stmt_t * parse_stmt_id_decl(lexer_t * lex) {
+    token_t * type = take_token(lex);
+    token_t * variable = take_token(lex);
+    enum TokenType next = take_token(lex)->token_type;
+    expr_t * value = NULL;
+
+    if (next == TOKEN_ASSIGN) {
+        value = parse_expr(lex);
+        take_token(lex); //SEMI
+    } else if (next == TOKEN_SEMI) {
+        value = NULL;
+    }
+
+    stmt_id_decl_t * id_decl = malloc(sizeof(stmt_assign_t));
+    id_decl->type = type;
+    id_decl->variable = variable;
+    id_decl->value = value;
+
+    stmt_t * stmt = malloc(sizeof(stmt_assign_t));
+    stmt->tag = STMT_ID_DECL;
+    stmt->stmt_id_decl = id_decl;
+    return stmt;    
+}
+
+stmt_t * parse_stmt_assign(lexer_t * lex) {
+    token_t * variable = take_token(lex);
+    take_token(lex); // take ASSIGN
+    expr_t * value = parse_expr(lex);
+    take_token(lex); // take SEMI
+
+    stmt_assign_t * assign = malloc(sizeof(stmt_assign_t));
+    assign->variable = variable;
+    assign->value = value;
+
+    stmt_t * stmt = malloc(sizeof(stmt_t));
+    stmt->tag = STMT_ASSIGN;
+    stmt->stmt_assign = assign;
+    return stmt;
+}
+
+stmt_t ** parse_stmt_block(lexer_t * lex) {
+    stmt_t ** block = malloc(300 * sizeof(stmt_t*));
+    take_token(lex); //LWING
+    int i = 0;
+    while(peak_token(lex) != TOKEN_RWING) {
+        block[i] = parse_stmt(lex);
+        i++;
+    }
+    take_token(lex); //RWING
+    return block;
+}
+
+stmt_t * parse_stmt_while(lexer_t * lex) {
+    take_token(lex); // WHILE
+    take_token(lex); // LPAR
+    expr_t * cond = parse_expr(lex);
+    take_token(lex); // RPAR
+
+    stmt_t ** block = parse_stmt_block(lex);
+       
+    stmt_while_t * while_stmt = malloc(sizeof(stmt_while_t));
+    while_stmt->cond = cond;
+    while_stmt->block = block;
+
+    stmt_t * stmt = malloc(sizeof(stmt_t));
+    stmt->tag = STMT_WHILE;
+    stmt->stmt_while = while_stmt;
+    return stmt;
+}
+
+stmt_t * parse_stmt_if(lexer_t * lex) {
+    take_token(lex); //IF 
+    take_token(lex); //LPAR
+
+    expr_t * cond = parse_expr(lex);
+
+    take_token(lex); //RPAR
+
+    stmt_t ** then = parse_stmt_block(lex);
+    stmt_t ** or_else = NULL;
+
+    if (peak_token(lex) == TOKEN_ELSE) {
+        take_token(lex); // ELSE
+
+        or_else = parse_stmt_block(lex);
+
+        take_token(lex); 
+    }
+
+    stmt_if_t * if_stmt = malloc(sizeof(stmt_while_t));
+    if_stmt->cond = cond;
+    if_stmt->then = then;
+    if_stmt->or_else = or_else;
+
+    stmt_t * stmt = malloc(sizeof(stmt_t));
+    stmt->tag = STMT_IF;
+    stmt->stmt_if = if_stmt;
+    return stmt;
+}
+
+stmt_t * parse_stmt_return(lexer_t * lex) {
+    take_token(lex); // RETURN
+    expr_t * ret_expr = parse_expr(lex);
+    take_token(lex); // SEMI
+
+    stmt_t * stmt = malloc(sizeof(stmt_t));
+    stmt->tag = STMT_RETURN;
+    stmt->stmt_return = ret_expr;
+    return stmt;
+}
 
 
-// struct stmt {
-//     enum StmtType tag;
-//     union {
-//         stmt_if_t * stmt_if;
-//         stmt_id_decl_t * stmt_id_decl;
-//         stmt_assign_t * stmt_assign;
+stmt_t * parse_stmt(lexer_t * lex) {
+    stmt_t * stmt; 
+    switch (peak_token(lex)) {
+        case TOKEN_IF:
+            stmt = parse_stmt_if(lex);
+            break;
+        case TOKEN_WHILE:
+            stmt = parse_stmt_while(lex);
+            break;
+        case TOKEN_RETURN:
+            stmt = parse_stmt_return(lex);
+            break;
+        case TOKEN_ID:
+            switch (peak_n_tokens(2, lex)) { 
+                case TOKEN_LPAR:
+                    stmt = parse_stmt_func_call(lex);
+                    break;
+                case TOKEN_ASSIGN:
+                    stmt = parse_stmt_assign(lex);
+                    break;
+                case TOKEN_ID:
+                    stmt = parse_stmt_id_decl(lex);
+                    break;
+                default: break;
+            }
+            break;
+        default: break;
+    }    
 
-//     } data;    
-// };    
+    return stmt;
+}
 
-
-// stmt_t * parse_stmt_id_decl(lexer_t * lex) {
-//     token_t * type = take_token(lex);
-//     token_t * variable = take_token(lex);
-//     enum TokenType next = take_token(lex)->token_type;
-
-//     expr_t * value = (next == ASSIGN) ? parse_expr(lex) : NULL; 
-//     return create_id_decl_stmt(type, variable, value);
-// }
-
-// stmt_t * parse_stmt_assign(lexer_t * lex) {
-//     token_t * variable = take_token(lex);
-//     take_token(lex); // take ASSIGN
-//     token_t * value = parse_expr(lex);
-//     take_token(lex); // take SEMI
-//     return create_assign_stmt(variable, value);
-// }
-
-// stmt_t * create_assign_stmt(token_t * variable, expr_t * value) {
-//     stmt_assign_t assign = malloc(sizeof(stmt_assign_t));
-//     assign->variable = variable;
-//     assign->value = value;
-
-//     stmt_t * stmt = malloc(sizeof(stmt_assign_t));
-//     stmt->tag = STMT_ASSIGN;
-//     stmt->data = assign;
-//     return stmt;
-// }
-
-// stmt_t * create_id_decl_stmt(token_t * type, token_t * variable, expr_t * value) {
-//     // value default to null 
-//     stmt_id_decl_t id_decl = malloc(sizeof(stmt_assign_t));
-//     id_decl->type = type;
-//     id_decl->variable = variable;
-//     id_decl->value = value;
-
-//     stmt_t * stmt = malloc(sizeof(stmt_assign_t));
-//     stmt->tag = STMT_ID_DECL;
-//     stmt->data = id_decl;
-//     return stmt;
-// }
 
 
 
 
 // ^^^^^^^^^^^^^^^^ In progress above ^^^^^^^^^^^^^^^^
+
+
 
 
 
@@ -546,7 +667,6 @@ int main(int argc, char const *argv[]) {
 //         default:
 //             break;
 //     }    
-    
 // }
 
 // // have a stmt type, expr type etc?

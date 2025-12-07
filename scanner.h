@@ -24,6 +24,8 @@ enum TokenType {
     TOKEN_GT, 
     TOKEN_GEQ, 
     TOKEN_IF, 
+    TOKEN_ELSE, 
+    TOKEN_RETURN, 
     TOKEN_WHILE, 
     TOKEN_ID, 
     TOKEN_NUM, 
