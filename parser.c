@@ -3,6 +3,8 @@
 #include <stdio.h>
 
 #define MAX_ARGS 64
+#define MAX_STMTS_IN_BLOCK 256
+
 //TODO:  
 // create a stmt_block struct that keep nbr_stmts
 // create unit tests.
@@ -11,6 +13,7 @@
 
 // LATER:
 //test parser for the input ()
+//create REPL 
 //Figure out how to propagate error messages
 //use a ¤ as a pointer deref.
 //create unit tests for scanner/parser
@@ -306,14 +309,18 @@ void print_expr(expr_t * expr) {
 
 
 
-
 enum StmtType { STMT_IF, STMT_ID_DECL, STMT_ASSIGN, STMT_FUNC_CALL, STMT_WHILE, STMT_RETURN, STMT_FUNC_DECL};
 typedef struct stmt stmt_t;
 
 typedef struct {
+    stmt_t ** stmts;
+    int stmt_count;
+} stmt_block_t;
+
+typedef struct {
     expr_t * cond;
-    stmt_t ** then;
-    stmt_t ** or_else;
+    stmt_block_t * then;
+    stmt_block_t * or_else;
 } stmt_if_t;
 
 typedef struct {
@@ -330,14 +337,14 @@ typedef struct {
 typedef struct {
     token_t * type;
     token_t * func_id;
-    stmt_t ** params; // this should be id_decls instead
-    stmt_t ** block;
+    stmt_t ** params; // id_decls
     int param_len;
+    stmt_block_t * block;
 } stmt_func_decl_t;
 
 typedef struct {
     expr_t * cond;
-    stmt_t ** block;
+    stmt_block_t * block;
 } stmt_while_t;
 
 struct stmt {
@@ -407,15 +414,22 @@ stmt_t * parse_stmt_assign(lexer_t * lex) {
     return stmt;
 }
 
-stmt_t ** parse_stmt_block(lexer_t * lex) {
-    stmt_t ** block = malloc(300 * sizeof(stmt_t*));
+stmt_block_t * parse_stmt_block(lexer_t * lex) {
+    
+    stmt_t ** stmts = malloc(MAX_STMTS_IN_BLOCK * sizeof(stmt_t*));
+    
     take_token(lex); //LWING
     int i = 0;
     while(peak_token(lex) != TOKEN_RWING) {
-        block[i] = parse_stmt(lex);
+        stmts[i] = parse_stmt(lex);
         i++;
     }
     take_token(lex); //RWING
+    
+    stmt_block_t * block =  malloc(sizeof(stmt_block_t));
+    block->stmts = stmts;
+    block->stmt_count = i;
+    
     return block;
 }
 
@@ -425,7 +439,7 @@ stmt_t * parse_stmt_while(lexer_t * lex) {
     expr_t * cond = parse_expr(lex);
     take_token(lex); // RPAR
     
-    stmt_t ** block = parse_stmt_block(lex);
+    stmt_block_t * block = parse_stmt_block(lex);
     
     stmt_while_t * while_stmt = malloc(sizeof(stmt_while_t));
     while_stmt->cond = cond;
@@ -445,8 +459,8 @@ stmt_t * parse_stmt_if(lexer_t * lex) {
     
     take_token(lex); //RPAR
     
-    stmt_t ** then = parse_stmt_block(lex);
-    stmt_t ** or_else = NULL;
+    stmt_block_t * then = parse_stmt_block(lex);
+    stmt_block_t * or_else = NULL;
     
     if (peak_token(lex) == TOKEN_ELSE) {
         take_token(lex); // ELSE
@@ -484,7 +498,7 @@ stmt_t * parse_stmt_func_decl(lexer_t * lex) {
     take_token(lex); // LPAR
     enum TokenType peak = peak_token(lex);
     stmt_t ** params = NULL;
-    stmt_t ** block = block;
+    stmt_block_t * block;
     int i = 0;
     token_t * next;
     
