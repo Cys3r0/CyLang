@@ -1,3 +1,7 @@
+#ifndef SCANNER_H
+#define SCANNER_H
+
+
 #include <regex.h>
 
 
@@ -35,13 +39,12 @@ enum TokenType {
 };
 
 
-
 typedef struct {
     enum TokenType token_type;
     int line;
     int col;
-
-    char * str;         // union for str + value (?)
+    
+    char * str; 
     int value;
 } token_t;
 
@@ -71,3 +74,5 @@ enum TokenType peak_n_tokens(int lookahead, lexer_t * lex);
 
 token_t * take_token(lexer_t * lexer);
 
+
+#endif 

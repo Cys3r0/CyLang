@@ -3,6 +3,21 @@
 #include <stdio.h>
 
 #define MAX_ARGS 64
+//TODO:  
+// create a stmt_block struct that keep nbr_stmts
+// create unit tests.
+// Create program super struct or something with list of func_decls,
+// Start with lexical analysis/correctness checking for AST
+
+// LATER:
+//test parser for the input ()
+//Figure out how to propagate error messages
+//use a ¤ as a pointer deref.
+//create unit tests for scanner/parser
+//implement pretty print for exprs
+//test calling functions within functions.
+
+
 
 enum ExprType { EXPR_BINOP, EXPR_UNARY, EXPR_FUNC_CALL, EXPR_NUMERAL, EXPR_ID };
 
@@ -79,18 +94,6 @@ struct expr {
 };
 
 
-//TODO: 
-//create a stmt type
-//test parser for the input ()
-//create a if, block, while, etc stmts.
-//skip_token take wrapper? 
-
-// LATER:
-//Figure out how to propagate error messages
-//use a ¤ as a pointer deref.
-//create unit tests for scanner/parser
-//implement pretty print for exprs
-//test calling functions within functions.
 
 
 char * expr_tag_to_str(enum ExprType tag) {
@@ -300,30 +303,6 @@ void print_expr(expr_t * expr) {
 }
 
 
-int main(int argc, char const *argv[]) {
-    char * file_text = "();";
-
-    regex_t regex;
-    regmatch_t m[NUMBER_OF_TOKENS + 1];
-    regcomp(&regex, REGEX_RULES, REG_EXTENDED);
-    lexer_t * lex = init_lexer(file_text, regex, m);
-    printf("%s\n", lex->file_text);
-    
-    for (int i = 0; i < 9; i++) {
-        printf("%s ", token_to_str(peak_n_tokens(i + 1, lex)));
-    }
-    printf("\n");
-    // token_t * next = take_token(lex);
-    expr_t * e = parse_expr(lex);
-
-    print_expr(e);
-    // printf("arg_len := %d \n", e->func_call.arg_len);
-
-
-    // expr_t * e = parse_expr(lex);
-    // print_expr(e);
-    return 0;
-}
 
 
 
@@ -351,9 +330,9 @@ typedef struct {
 typedef struct {
     token_t * type;
     token_t * func_id;
-    int param_len;
     stmt_t ** params; // this should be id_decls instead
     stmt_t ** block;
+    int param_len;
 } stmt_func_decl_t;
 
 typedef struct {
@@ -393,19 +372,19 @@ stmt_t * parse_stmt_id_decl(lexer_t * lex) {
     token_t * variable = take_token(lex);
     enum TokenType next = take_token(lex)->token_type;
     expr_t * value = NULL;
-
+    
     if (next == TOKEN_ASSIGN) {
         value = parse_expr(lex);
         take_token(lex); //SEMI
     } else if (next == TOKEN_SEMI) {
         value = NULL;
     }
-
+    
     stmt_id_decl_t * id_decl = malloc(sizeof(stmt_id_decl_t));
     id_decl->type = type;
     id_decl->variable = variable;
     id_decl->value = value;
-
+    
     stmt_t * stmt = malloc(sizeof(stmt_t));
     stmt->tag = STMT_ID_DECL;
     stmt->stmt_id_decl = id_decl;
@@ -417,11 +396,11 @@ stmt_t * parse_stmt_assign(lexer_t * lex) {
     take_token(lex); // take ASSIGN
     expr_t * value = parse_expr(lex);
     take_token(lex); // take SEMI
-
+    
     stmt_assign_t * assign = malloc(sizeof(stmt_assign_t));
     assign->variable = variable;
     assign->value = value;
-
+    
     stmt_t * stmt = malloc(sizeof(stmt_t));
     stmt->tag = STMT_ASSIGN;
     stmt->stmt_assign = assign;
@@ -445,13 +424,13 @@ stmt_t * parse_stmt_while(lexer_t * lex) {
     take_token(lex); // LPAR
     expr_t * cond = parse_expr(lex);
     take_token(lex); // RPAR
-
+    
     stmt_t ** block = parse_stmt_block(lex);
-       
+    
     stmt_while_t * while_stmt = malloc(sizeof(stmt_while_t));
     while_stmt->cond = cond;
     while_stmt->block = block;
-
+    
     stmt_t * stmt = malloc(sizeof(stmt_t));
     stmt->tag = STMT_WHILE;
     stmt->stmt_while = while_stmt;
@@ -461,27 +440,27 @@ stmt_t * parse_stmt_while(lexer_t * lex) {
 stmt_t * parse_stmt_if(lexer_t * lex) {
     take_token(lex); //IF 
     take_token(lex); //LPAR
-
+    
     expr_t * cond = parse_expr(lex);
-
+    
     take_token(lex); //RPAR
-
+    
     stmt_t ** then = parse_stmt_block(lex);
     stmt_t ** or_else = NULL;
-
+    
     if (peak_token(lex) == TOKEN_ELSE) {
         take_token(lex); // ELSE
-
+        
         or_else = parse_stmt_block(lex);
-
+        
         take_token(lex); 
     }
-
+    
     stmt_if_t * if_stmt = malloc(sizeof(stmt_while_t));
     if_stmt->cond = cond;
     if_stmt->then = then;
     if_stmt->or_else = or_else;
-
+    
     stmt_t * stmt = malloc(sizeof(stmt_t));
     stmt->tag = STMT_IF;
     stmt->stmt_if = if_stmt;
@@ -514,7 +493,7 @@ stmt_t * parse_stmt_func_decl(lexer_t * lex) {
         params[i] = parse_stmt_id_decl(lex);
         i++;
         peak = peak_token(lex);
-
+        
         while (peak_token(lex) == TOKEN_COMMA) {
             if (i >= MAX_ARGS) {
                 printf("Function call may not exceed MAX_ARGS arguments.");
@@ -529,14 +508,14 @@ stmt_t * parse_stmt_func_decl(lexer_t * lex) {
         take_token(lex); // RPAR
     }
     block = parse_stmt_block(lex);
-
+    
     stmt_func_decl_t * func_decl = malloc(sizeof(stmt_func_decl_t));
     func_decl->type = type;
     func_decl->func_id = name;
     func_decl->params = params;
     func_decl->param_len = i;
     func_decl->block = block;
-
+    
     stmt_t * stmt = malloc(sizeof(stmt_t));
     stmt->tag = STMT_FUNC_DECL;
     stmt->stmt_func_decl = func_decl;
@@ -548,15 +527,15 @@ stmt_t * parse_stmt(lexer_t * lex) {
     stmt_t * stmt; 
     switch (peak_token(lex)) {
         case TOKEN_IF:
-            stmt = parse_stmt_if(lex);
-            break;
-        case TOKEN_WHILE:
-            stmt = parse_stmt_while(lex);
-            break;
-        case TOKEN_RETURN:
-            stmt = parse_stmt_return(lex);
-            break;
-        case TOKEN_ID:
+                stmt = parse_stmt_if(lex);
+                break;
+            case TOKEN_WHILE:
+                stmt = parse_stmt_while(lex);
+                break;
+            case TOKEN_RETURN:
+                stmt = parse_stmt_return(lex);
+                break;
+            case TOKEN_ID:
             switch (peak_n_tokens(2, lex)) { 
                 case TOKEN_LPAR:
                     stmt = parse_stmt_func_call(lex);
@@ -570,12 +549,43 @@ stmt_t * parse_stmt(lexer_t * lex) {
                 default: break;
             }
             break;
-        default: break;
-    }    
-
-    return stmt;
+            default: break;
+        }    
+        
+        return stmt;
 }
 
+int main(int argc, char const *argv[]) {
+    char * file_text = "int a = 10;";
+
+    regex_t regex;
+    regmatch_t m[NUMBER_OF_TOKENS + 1];
+    regcomp(&regex, REGEX_RULES, REG_EXTENDED);
+    lexer_t * lex = init_lexer(file_text, regex, m);
+    printf("%s\n", lex->file_text);
+    
+    for (int i = 0; i < 9; i++) {
+        printf("%s ", token_to_str(peak_n_tokens(i + 1, lex)));
+    }
+    printf("\n");
+
+    stmt_t * stmt = parse_stmt(lex);
+    if (stmt->tag == STMT_ID_DECL) {
+        printf("STMT_ID_DECL\n");
+        printf("type: %s, name: %s, value: %d \n", 
+            stmt->stmt_id_decl->type->str, stmt->stmt_id_decl->variable->str, stmt->stmt_id_decl->value->numeral.value);
+    }
+    // token_t * next = take_token(lex);
+    // expr_t * e = parse_expr(lex);
+
+    // print_expr(e);
+    // printf("arg_len := %d \n", e->func_call.arg_len);
+
+
+    // expr_t * e = parse_expr(lex);
+    // print_expr(e);
+    return 0;
+}
 
 
 
