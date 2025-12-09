@@ -6,7 +6,6 @@
 #define MAX_STMTS_IN_BLOCK 256
 
 //TODO:  
-// create a stmt_block struct that keep nbr_stmts
 // create unit tests.
 // Create program super struct or something with list of func_decls,
 // Start with lexical analysis/correctness checking for AST
