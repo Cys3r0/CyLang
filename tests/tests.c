@@ -1,5 +1,5 @@
-#include "scanner.h" // error is due to regex.h wsl thing
-#include "parser.h" 
+#include "../scanner.h" // error is due to regex.h wsl thing
+#include "../parser.h" 
 
 
 // todo
@@ -88,7 +88,8 @@ void print_expr(expr_t * expr, int level) {
 
 void print_stmt(stmt_t * stmt, int level) ;
 
-void print_stmt_block(stmt_block_t * block, int level) {
+void print_stmt_block_inner(stmt_block_t * block, int level) {
+    print_level(level); printf("stmt_count: %d\n", block->stmt_count);
     for (int i = 0; i < block->stmt_count; i++) {
         print_stmt(block->stmts[i], level); 
     }
@@ -100,11 +101,11 @@ void print_stmt_if(stmt_if_t * if_stmt, int level) {
     print_expr(if_stmt->cond, level+1);
 
     print_level(level); printf("then: \n");
-    print_stmt_block(if_stmt->then, level+1);
+    print_stmt_block_inner(if_stmt->then, level+1);
 
     if (if_stmt->or_else) {
         print_level(level); printf("then: \n");
-        print_stmt_block(if_stmt->or_else, level+1);
+        print_stmt_block_inner(if_stmt->or_else, level+1);
     }
 }
 
@@ -134,7 +135,7 @@ void print_stmt_while(stmt_while_t * while_stmt, int level) {
     print_expr(while_stmt->cond, level+1);
 
     print_level(level); printf("block: \n");
-    print_stmt_block(while_stmt->block, level+1);
+    print_stmt_block_inner(while_stmt->block, level+1);
 }
 
 
@@ -148,6 +149,8 @@ void print_stmt_func_decl(stmt_func_decl_t * func_decl, int level) {
         print_level(level); printf("params[%d]: \n", i);
         print_stmt(func_decl->params[i], level+1);
     }
+
+    print_stmt_block_inner(func_decl->block, level+1);
 }
 
 
@@ -183,7 +186,10 @@ void print_stmt(stmt_t * stmt, int level) {
             printf("_FUNC_DECL\n");
             print_stmt_func_decl(stmt->stmt_func_decl, level+1);
             break;
-        
+        case STMT_BLOCK:
+            printf("_BLOCK\n");
+            print_stmt_block_inner(stmt->stmt_block, level+1);
+            break;
 
         default:
             break;
@@ -191,17 +197,25 @@ void print_stmt(stmt_t * stmt, int level) {
 }
 
 
-int main() {
-    char * file_text = "while (1) { int a; int b; while (true) {} }";
-
+int main(int argc, char *argv[]) {
     regex_t regex;
     regmatch_t m[NUMBER_OF_TOKENS + 1];
     regcomp(&regex, REGEX_RULES, REG_EXTENDED);
+    
+    
+    char file_text[1<<11];
+    
+    if (!fgets(file_text, sizeof(file_text), stdin))  
+        return 1;
+        
     lexer_t * lex = init_lexer(file_text, regex, m);
     printf("%s\n", lex->file_text);
     
-    stmt_t * stmt = parse_stmt(lex);
-    print_stmt(stmt, 0);
+
+
+    
+    // stmt_t * stmt = parse_stmt(lex);
+    // print_stmt(stmt, 0);
     return 0;
 }
 

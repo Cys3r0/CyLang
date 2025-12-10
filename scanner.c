@@ -8,6 +8,7 @@
 
 
 // LATER:
+// Move all regex stuff into init_lexer
 // memoize peak_n_tokens
 // add a take_token_specifc, which takes expects a certain token which is passed to it (or include this in skip_token)
 // add a skip_token that doesn't create a token_t object but removes form lex->file_text
@@ -95,6 +96,9 @@ typedef struct {
 
 
 lexer_t * init_lexer(char * file_text, regex_t regex, regmatch_t * m) {
+
+
+
     lexer_t * lex = malloc(sizeof(lexer_t)); 
     lex->file_text = file_text;
     lex->regex = regex;

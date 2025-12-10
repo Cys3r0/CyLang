@@ -1,4 +1,5 @@
 #include "scanner.h" // error is due to regex.h wsl thing
+#include "parser.h" 
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -20,8 +21,6 @@
 //test calling functions within functions.
 
 
-
-enum ExprType { EXPR_BINOP, EXPR_UNARY, EXPR_FUNC_CALL, EXPR_NUMERAL, EXPR_ID };
 
 int is_binop(enum TokenType token_type) {
     //works for now
@@ -64,38 +63,6 @@ int precedence_of(enum TokenType token_type) {
         default: return -1;
     }
 }
-
-typedef struct expr expr_t;
-
-typedef struct {
-    enum TokenType op;
-    expr_t * inner;
-} unary_t;
-
-typedef struct {
-    enum TokenType op;
-    expr_t * left; 
-    expr_t * right;
-} binop_t;
-
-typedef struct {
-    token_t * func_id;
-    expr_t ** args;
-    int arg_len;
-} expr_func_call_t;
-
-struct expr {
-    enum ExprType tag;
-    union {
-        binop_t binop;
-        unary_t unary;
-        token_t id;
-        token_t numeral;
-        expr_func_call_t func_call;
-    };
-};
-
-
 
 
 char * expr_tag_to_str(enum ExprType tag) {
@@ -276,88 +243,6 @@ expr_t * parse_expr(lexer_t * lex) {
     return parse_expr_recursive(expr, 0, lex, &lookahead);
 }
 
-// void print_expr_recursive(expr_t * expr, int level) {
-//     if (expr->tag == EXPR_FUNC_CALL) {
-//         printf("L%d func_call: %s(", level, expr->func_call.func_id->str);
-//         if (expr->func_call.arg_len > 0) {
-//             printf("%d", expr->func_call.args[0]->numeral.value);
-//             for (int i = 1; i < expr->func_call.arg_len; i++) {
-//                 printf(", %d", expr->func_call.args[i]->numeral.value);
-//             }
-//         }    
-//         printf(")\n");
-//     } else if (expr->tag == EXPR_NUMERAL) {
-//         printf("L%d atom: %s = %d\n", level, token_to_str(expr->numeral.token_type), expr->numeral.value);
-//     } else if (expr->tag == EXPR_ID) {
-//         printf("L%d atom: %s = %s\n", level, token_to_str(expr->id.token_type), expr->id.str);
-//     } else if (expr->tag == EXPR_BINOP) {
-//         printf("L%d binop: %s\n", level, token_to_str(expr->binop.op));
-//         print_expr_recursive(expr->binop.right, level+1);
-//         print_expr_recursive(expr->binop.left, level+1);
-//     } else if (expr->tag == EXPR_UNARY) {
-//         printf("L%d unary: %s\n", level, token_to_str(expr->unary.op));
-//         print_expr_recursive(expr->unary.inner, level+1);
-//     }
-// }
-
-// void print_expr(expr_t * expr) {
-//     print_expr_recursive(expr, 0);
-// }
-
-
-
-
-
-enum StmtType { STMT_IF, STMT_ID_DECL, STMT_ASSIGN, STMT_FUNC_CALL, STMT_WHILE, STMT_RETURN, STMT_FUNC_DECL};
-typedef struct stmt stmt_t;
-
-typedef struct {
-    stmt_t ** stmts;
-    int stmt_count;
-} stmt_block_t;
-
-typedef struct {
-    expr_t * cond;
-    stmt_block_t * then;
-    stmt_block_t * or_else;
-} stmt_if_t;
-
-typedef struct {
-    token_t * type;
-    token_t * variable;
-    expr_t * value;
-} stmt_id_decl_t;
-
-typedef struct {
-    token_t * variable;
-    expr_t * value;
-} stmt_assign_t;
-
-typedef struct {
-    token_t * type;
-    token_t * func_id;
-    stmt_t ** params; // id_decls
-    int param_len;
-    stmt_block_t * block;
-} stmt_func_decl_t;
-
-typedef struct {
-    expr_t * cond;
-    stmt_block_t * block;
-} stmt_while_t;
-
-struct stmt {
-    enum StmtType tag;
-    union {
-        stmt_if_t * stmt_if;
-        stmt_id_decl_t * stmt_id_decl;
-        stmt_assign_t * stmt_assign;
-        expr_t * func_call;
-        stmt_while_t * stmt_while;
-        expr_t * stmt_return;
-        stmt_func_decl_t * stmt_func_decl;
-    };    
-};    
 
 
 stmt_t * parse_stmt(lexer_t * lex);
@@ -413,8 +298,7 @@ stmt_t * parse_stmt_assign(lexer_t * lex) {
     return stmt;
 }
 
-stmt_block_t * parse_stmt_block(lexer_t * lex) {
-    
+stmt_block_t * parse_stmt_block_inner(lexer_t * lex) {    
     stmt_t ** stmts = malloc(MAX_STMTS_IN_BLOCK * sizeof(stmt_t*));
     
     take_token(lex); //LWING
@@ -432,13 +316,24 @@ stmt_block_t * parse_stmt_block(lexer_t * lex) {
     return block;
 }
 
+stmt_t * parse_stmt_block(lexer_t * lex) {
+    take_token(lex); //LWING
+
+
+    stmt_t * stmt =  malloc(sizeof(stmt_t));
+    stmt->tag = STMT_BLOCK;
+    stmt->stmt_block = parse_stmt_block_inner(lex);
+    return stmt;
+}
+
+
 stmt_t * parse_stmt_while(lexer_t * lex) {
     take_token(lex); // WHILE
     take_token(lex); // LPAR
     expr_t * cond = parse_expr(lex);
     take_token(lex); // RPAR
     
-    stmt_block_t * block = parse_stmt_block(lex);
+    stmt_block_t * block = parse_stmt_block_inner(lex);
     
     stmt_while_t * while_stmt = malloc(sizeof(stmt_while_t));
     while_stmt->cond = cond;
@@ -458,13 +353,13 @@ stmt_t * parse_stmt_if(lexer_t * lex) {
     
     take_token(lex); //RPAR
     
-    stmt_block_t * then = parse_stmt_block(lex);
+    stmt_block_t * then = parse_stmt_block_inner(lex);
     stmt_block_t * or_else = NULL;
     
     if (peak_token(lex) == TOKEN_ELSE) {
         take_token(lex); // ELSE
         
-        or_else = parse_stmt_block(lex);
+        or_else = parse_stmt_block_inner(lex);
         
         take_token(lex); 
     }
@@ -520,7 +415,7 @@ stmt_t * parse_stmt_func_decl(lexer_t * lex) {
     } else {
         take_token(lex); // RPAR
     }
-    block = parse_stmt_block(lex);
+    block = parse_stmt_block_inner(lex);
     
     stmt_func_decl_t * func_decl = malloc(sizeof(stmt_func_decl_t));
     func_decl->type = type;
@@ -542,12 +437,15 @@ stmt_t * parse_stmt(lexer_t * lex) {
         case TOKEN_IF:
                 stmt = parse_stmt_if(lex);
                 break;
-            case TOKEN_WHILE:
-                stmt = parse_stmt_while(lex);
+        case TOKEN_LWING:
+                stmt = parse_stmt_block(lex);
                 break;
-            case TOKEN_RETURN:
-                stmt = parse_stmt_return(lex);
-                break;
+        case TOKEN_WHILE:
+            stmt = parse_stmt_while(lex);
+            break;
+        case TOKEN_RETURN:
+            stmt = parse_stmt_return(lex);
+            break;
             case TOKEN_ID:
             switch (peak_n_tokens(2, lex)) { 
                 case TOKEN_LPAR:

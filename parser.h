@@ -87,7 +87,8 @@ enum StmtType {
     STMT_FUNC_CALL, 
     STMT_WHILE, 
     STMT_RETURN, 
-    STMT_FUNC_DECL
+    STMT_FUNC_DECL,
+    STMT_BLOCK
 };
 
 typedef struct stmt stmt_t;
@@ -137,6 +138,7 @@ struct stmt {
         stmt_while_t * stmt_while;
         expr_t * stmt_return;
         stmt_func_decl_t * stmt_func_decl;
+        stmt_block_t * stmt_block;
     };    
 };    
 
@@ -145,7 +147,7 @@ stmt_t * parse_stmt_func_call(lexer_t * lex) ;
 
 stmt_t * parse_stmt_assign(lexer_t * lex) ;
 
-stmt_t ** parse_stmt_block(lexer_t * lex) ;
+stmt_t * parse_stmt_block(lexer_t * lex) ;
 
 stmt_t * parse_stmt_while(lexer_t * lex) ;
 
