@@ -276,33 +276,33 @@ expr_t * parse_expr(lexer_t * lex) {
     return parse_expr_recursive(expr, 0, lex, &lookahead);
 }
 
-void print_expr_recursive(expr_t * expr, int level) {
-    if (expr->tag == EXPR_FUNC_CALL) {
-        printf("L%d func_call: %s(", level, expr->func_call.func_id->str);
-        if (expr->func_call.arg_len > 0) {
-            printf("%d", expr->func_call.args[0]->numeral.value);
-            for (int i = 1; i < expr->func_call.arg_len; i++) {
-                printf(", %d", expr->func_call.args[i]->numeral.value);
-            }
-        }    
-        printf(")\n");
-    } else if (expr->tag == EXPR_NUMERAL) {
-        printf("L%d atom: %s = %d\n", level, token_to_str(expr->numeral.token_type), expr->numeral.value);
-    } else if (expr->tag == EXPR_ID) {
-        printf("L%d atom: %s = %s\n", level, token_to_str(expr->id.token_type), expr->id.str);
-    } else if (expr->tag == EXPR_BINOP) {
-        printf("L%d binop: %s\n", level, token_to_str(expr->binop.op));
-        print_expr_recursive(expr->binop.right, level+1);
-        print_expr_recursive(expr->binop.left, level+1);
-    } else if (expr->tag == EXPR_UNARY) {
-        printf("L%d unary: %s\n", level, token_to_str(expr->unary.op));
-        print_expr_recursive(expr->unary.inner, level+1);
-    }
-}
+// void print_expr_recursive(expr_t * expr, int level) {
+//     if (expr->tag == EXPR_FUNC_CALL) {
+//         printf("L%d func_call: %s(", level, expr->func_call.func_id->str);
+//         if (expr->func_call.arg_len > 0) {
+//             printf("%d", expr->func_call.args[0]->numeral.value);
+//             for (int i = 1; i < expr->func_call.arg_len; i++) {
+//                 printf(", %d", expr->func_call.args[i]->numeral.value);
+//             }
+//         }    
+//         printf(")\n");
+//     } else if (expr->tag == EXPR_NUMERAL) {
+//         printf("L%d atom: %s = %d\n", level, token_to_str(expr->numeral.token_type), expr->numeral.value);
+//     } else if (expr->tag == EXPR_ID) {
+//         printf("L%d atom: %s = %s\n", level, token_to_str(expr->id.token_type), expr->id.str);
+//     } else if (expr->tag == EXPR_BINOP) {
+//         printf("L%d binop: %s\n", level, token_to_str(expr->binop.op));
+//         print_expr_recursive(expr->binop.right, level+1);
+//         print_expr_recursive(expr->binop.left, level+1);
+//     } else if (expr->tag == EXPR_UNARY) {
+//         printf("L%d unary: %s\n", level, token_to_str(expr->unary.op));
+//         print_expr_recursive(expr->unary.inner, level+1);
+//     }
+// }
 
-void print_expr(expr_t * expr) {
-    print_expr_recursive(expr, 0);
-}
+// void print_expr(expr_t * expr) {
+//     print_expr_recursive(expr, 0);
+// }
 
 
 
@@ -568,37 +568,37 @@ stmt_t * parse_stmt(lexer_t * lex) {
         return stmt;
 }
 
-int main(int argc, char const *argv[]) {
-    char * file_text = "int a = 10;";
+// int main(int argc, char const *argv[]) {
+//     char * file_text = "int a = 10;";
 
-    regex_t regex;
-    regmatch_t m[NUMBER_OF_TOKENS + 1];
-    regcomp(&regex, REGEX_RULES, REG_EXTENDED);
-    lexer_t * lex = init_lexer(file_text, regex, m);
-    printf("%s\n", lex->file_text);
+//     regex_t regex;
+//     regmatch_t m[NUMBER_OF_TOKENS + 1];
+//     regcomp(&regex, REGEX_RULES, REG_EXTENDED);
+//     lexer_t * lex = init_lexer(file_text, regex, m);
+//     printf("%s\n", lex->file_text);
     
-    for (int i = 0; i < 9; i++) {
-        printf("%s ", token_to_str(peak_n_tokens(i + 1, lex)));
-    }
-    printf("\n");
+//     for (int i = 0; i < 9; i++) {
+//         printf("%s ", token_to_str(peak_n_tokens(i + 1, lex)));
+//     }
+//     printf("\n");
 
-    stmt_t * stmt = parse_stmt(lex);
-    if (stmt->tag == STMT_ID_DECL) {
-        printf("STMT_ID_DECL\n");
-        printf("type: %s, name: %s, value: %d \n", 
-            stmt->stmt_id_decl->type->str, stmt->stmt_id_decl->variable->str, stmt->stmt_id_decl->value->numeral.value);
-    }
-    // token_t * next = take_token(lex);
-    // expr_t * e = parse_expr(lex);
+//     stmt_t * stmt = parse_stmt(lex);
+//     if (stmt->tag == STMT_ID_DECL) {
+//         printf("STMT_ID_DECL\n");
+//         printf("type: %s, name: %s, value: %d \n", 
+//             stmt->stmt_id_decl->type->str, stmt->stmt_id_decl->variable->str, stmt->stmt_id_decl->value->numeral.value);
+//     }
+//     // token_t * next = take_token(lex);
+//     // expr_t * e = parse_expr(lex);
 
-    // print_expr(e);
-    // printf("arg_len := %d \n", e->func_call.arg_len);
+//     // print_expr(e);
+//     // printf("arg_len := %d \n", e->func_call.arg_len);
 
 
-    // expr_t * e = parse_expr(lex);
-    // print_expr(e);
-    return 0;
-}
+//     // expr_t * e = parse_expr(lex);
+//     // print_expr(e);
+//     return 0;
+// }
 
 
 

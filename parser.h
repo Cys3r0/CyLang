@@ -75,10 +75,6 @@ expr_t * parse_expr_recursive(expr_t * lhs, int min_precedence, lexer_t * lex, e
 
 expr_t * parse_expr(lexer_t * lex) ;
 
-void print_expr_recursive(expr_t * expr, int level) ;
-
-void print_expr(expr_t * expr) ;
-
 
 
 
