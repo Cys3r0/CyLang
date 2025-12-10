@@ -97,9 +97,14 @@ enum StmtType {
 typedef struct stmt stmt_t;
 
 typedef struct {
+    stmt_t ** stmts;
+    int stmt_count;
+} stmt_block_t;
+
+typedef struct {
     expr_t * cond;
-    stmt_t ** then;
-    stmt_t ** or_else;
+    stmt_block_t * then;
+    stmt_block_t * or_else;
 } stmt_if_t;
 
 typedef struct {
@@ -116,14 +121,14 @@ typedef struct {
 typedef struct {
     token_t * type;
     token_t * func_id;
-    stmt_t ** params; // this should be id_decls instead
-    stmt_t ** block;
+    stmt_t ** params; // id_decls
     int param_len;
+    stmt_block_t * block;
 } stmt_func_decl_t;
 
 typedef struct {
     expr_t * cond;
-    stmt_t ** block;
+    stmt_block_t * block;
 } stmt_while_t;
 
 struct stmt {
@@ -138,6 +143,7 @@ struct stmt {
         stmt_func_decl_t * stmt_func_decl;
     };    
 };    
+
 
 stmt_t * parse_stmt_func_call(lexer_t * lex) ;
 
