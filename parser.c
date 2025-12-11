@@ -317,9 +317,6 @@ stmt_block_t * parse_stmt_block_inner(lexer_t * lex) {
 }
 
 stmt_t * parse_stmt_block(lexer_t * lex) {
-    take_token(lex); //LWING
-
-
     stmt_t * stmt =  malloc(sizeof(stmt_t));
     stmt->tag = STMT_BLOCK;
     stmt->stmt_block = parse_stmt_block_inner(lex);
@@ -435,11 +432,11 @@ stmt_t * parse_stmt(lexer_t * lex) {
     stmt_t * stmt; 
     switch (peak_token(lex)) {
         case TOKEN_IF:
-                stmt = parse_stmt_if(lex);
-                break;
+            stmt = parse_stmt_if(lex);
+            break;
         case TOKEN_LWING:
-                stmt = parse_stmt_block(lex);
-                break;
+            stmt = parse_stmt_block(lex);
+            break;
         case TOKEN_WHILE:
             stmt = parse_stmt_while(lex);
             break;

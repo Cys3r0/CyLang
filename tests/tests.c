@@ -42,7 +42,7 @@ void print_expr_unary(unary_t * unary, int level) {
 
 void print_expr_func_call(expr_func_call_t * func_call, int level) {
     print_level(level); printf("func_id: \n");
-    print_token_str(func_call->func_id, level);
+    print_token_str(func_call->func_id, level+1);
 
     print_level(level); printf("args_len: %d\n", func_call->arg_len);
 
@@ -74,7 +74,7 @@ void print_expr(expr_t * expr, int level) {
             print_token_value(&expr->numeral, level+1);
             break;
         case EXPR_FUNC_CALL:
-            printf("_FUNC_CALL");
+            printf("_FUNC_CALL\n");
             print_expr_func_call(&expr->func_call, level+1);
             break;
 
@@ -179,7 +179,7 @@ void print_stmt(stmt_t * stmt, int level) {
             print_stmt_while(stmt->stmt_while, level+1);
             break;
         case STMT_RETURN:
-            printf("_RETURN");
+            printf("_RETURN\n");
             print_expr(stmt->stmt_return, level+1);
             break;
         case STMT_FUNC_DECL:
@@ -201,21 +201,28 @@ int main(int argc, char *argv[]) {
     regex_t regex;
     regmatch_t m[NUMBER_OF_TOKENS + 1];
     regcomp(&regex, REGEX_RULES, REG_EXTENDED);
-    
+
+
+        
     
     char file_text[1<<11];
-    
-    if (!fgets(file_text, sizeof(file_text), stdin))  
-        return 1;
-        
+    size_t n = fread(file_text, 1, sizeof(file_text)-1, stdin);
+    file_text[n] = '\0';
     lexer_t * lex = init_lexer(file_text, regex, m);
+    
+    for (int i = 0; i < 9; i++) {
+        printf("%s ", token_to_str(peak_n_tokens(i + 1, lex)));
+    }
+    printf("\n");
+    
+    // if (!fgets(file_text, sizeof(file_text), stdin))  
+    //     return 1;
+        
     printf("%s\n", lex->file_text);
     
-
-
     
-    // stmt_t * stmt = parse_stmt(lex);
-    // print_stmt(stmt, 0);
+    stmt_t * stmt = parse_stmt(lex);
+    print_stmt(stmt, 0);
     return 0;
 }
 
