@@ -202,17 +202,29 @@ int main(int argc, char *argv[]) {
     regmatch_t m[NUMBER_OF_TOKENS + 1];
     regcomp(&regex, REGEX_RULES, REG_EXTENDED);
 
+    int name_buf_size = 1<<7;
+    int file_buf_size = 1<<11;
+    char file_name[name_buf_size];
+    char file_text[file_buf_size];
+    
+    while (1) {
+        line = fgets(file_name, name_buf_size, stdin)
+        line[strcspn(line, "\n")] = '\0';
+        line[strcspn(line, "\n")] = '\0';
+        line[strcspn(line, "\n")] = '\0';
 
-        
-    
-    char file_text[1<<11];
-    size_t n = fread(file_text, 1, sizeof(file_text)-1, stdin);
-    file_text[n] = '\0';
-    lexer_t * lex = init_lexer(file_text, regex, m);
-    
-    for (int i = 0; i < 9; i++) {
-        printf("%s ", token_to_str(peak_n_tokens(i + 1, lex)));
+
+
+        size_t n = fread(file_text, 1, sizeof(file_text)-1, stdin);
+        file_text[n] = '\0';
     }
+    
+    
+    lexer_t * lex = init_lexer(file_text, regex, m);
+
+    
+    for (int i = 0; i < 9; i++) 
+        printf("%s ", token_to_str(peak_n_tokens(i + 1, lex)));
     printf("\n");
     
     // if (!fgets(file_text, sizeof(file_text), stdin))  
