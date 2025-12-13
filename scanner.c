@@ -18,6 +18,214 @@
 // Create own scanner
 
 
+char peak_char(char * source) {
+    return source[0];
+}
+
+char take_char(char ** source) {
+    char c = (*source)[0];
+    (*source)++;
+    return c;
+}
+
+int is_numeric(char c) {
+    return '0' <= c <= '9';
+}
+
+int is_letter(char c) {
+    return 'a' <= c <= 'z' || 'A' <= c <= 'Z' ;
+}
+
+int is_letter(char c) {
+    return 'a' <= c <= 'z' || 'A' <= c <= 'Z' || '0' <= c <= '9';
+}
+
+enum TokenType peak_tok(char * s) {
+    // Incomplete, needs expanding as soon as identifiers take form [a-zA-Z][a-zA-Z0-9],
+    // which it already should to be honest
+
+    char c = peak_char(s);
+
+    if (c == ';')
+        return TOKEN_SEMI;
+    if (c == ',')
+        return TOKEN_COMMA;
+    if (c == '(')
+        return TOKEN_LPAR;
+    if (c == ')')
+        return TOKEN_RPAR;
+    if (c == '{')
+        return TOKEN_LWING;
+    if (c == '}')
+        return TOKEN_RWING;
+    if (c == '[')
+        return TOKEN_LBRACKET;
+    if (c == ']')
+        return TOKEN_RBRACKET;
+    if (c == '+')
+        return TOKEN_ADD;
+    if (c == '-')
+        return TOKEN_SUB;
+    if (c == '*')
+        return TOKEN_MUL;
+    if (c == '/')
+        return TOKEN_DIV;
+    if (c == '%')
+        return TOKEN_MOD;
+    if (c == '^') 
+        return (peak_char(s+1) == '^') ? TOKEN_EXPONENT : TOKEN_EXPONENT; //TOKEN_XOR
+    if (c == '>') 
+        return (peak_char(s+1) == '=') ? TOKEN_GT : TOKEN_GEQ; 
+    if (c == '<') 
+        return (peak_char(s+1) == '=') ? TOKEN_LT : TOKEN_LEQ; 
+    if (c == '=') 
+        return (peak_char(s+1) == '=') ? TOKEN_ASSIGN : TOKEN_EQ;
+    if (c == '!' || peak_char(s+1) == '=') 
+        return TOKEN_NEQ;
+    // if (c == '!') 
+    //     return (peak_char(s+1) == '=') ? TOKEN_ASSIGN : TOKEN_NEQ; //TOKEN_NOT
+    // if (c == '|') 
+    //     return (peak_char(s+1) == '|') ? TOKEN_ASSIGN : TOKEN_NEQ; //TOKEN_NOT
+    if (c == 'w' 
+        && peak_char(s+1) == 'h' 
+        && peak_char(s+2) == 'i' 
+        && peak_char(s+3) == 'l' 
+        && peak_char(s+4) == 'e'
+        && !is_letter(peak_char(s+5))) return TOKEN_WHILE;
+    if (c == 'i' 
+        && peak_char(s+1) == 'f' 
+        && !is_letter(peak_char(s+2))) return TOKEN_IF;
+    if (c == 'e' 
+        && peak_char(s+1) == 'l' 
+        && peak_char(s+2) == 's' 
+        && peak_char(s+3) == 'e' 
+        && !is_letter(peak_char(s+4))) return TOKEN_ELSE;
+    if (c == 'e' 
+        && peak_char(s+1) == 'l' 
+        && peak_char(s+2) == 's' 
+        && peak_char(s+3) == 'e' 
+        && !is_letter(peak_char(s+4))) return TOKEN_ELSE;
+    if (c == 'r' 
+        && peak_char(s+1) == 'e' 
+        && peak_char(s+2) == 't' 
+        && peak_char(s+3) == 'u'
+        && peak_char(s+4) == 'r'
+        && peak_char(s+5) == 'n' 
+        && !is_letter(peak_char(s+6))) return TOKEN_RETURN;
+    if (is_letter(c))
+        return TOKEN_ID;
+    if (is_numeric(c))
+        return TOKEN_NUM;
+    if (c == ' ')
+        return peak_tok(s+1);
+    if (c == '\n')
+        return peak_tok(s+1);
+}
+
+
+typedef struct {
+    char * source;
+    int col;
+    int row;
+} neo_lexer_t;
+
+typedef struct {
+    enum TokenType type;
+    int col;
+    int row;
+    union {
+        char * lexeme;
+        int value;
+    }
+} neo_token_t;
+
+
+token_t * create_token(enum TokenType token_type, int line, int col, char * lexeme, int value * ) {
+    
+}
+
+token_t * take_tok(lexer_t * lex) {
+    char * s = lex->file_text;
+    char c = peak_char(s);
+
+    if (c == ';')
+        return TOKEN_SEMI;
+    if (c == ',')
+        return TOKEN_COMMA;
+    if (c == '(')
+        return TOKEN_LPAR;
+    if (c == ')')
+        return TOKEN_RPAR;
+    if (c == '{')
+        return TOKEN_LWING;
+    if (c == '}')
+        return TOKEN_RWING;
+    if (c == '[')
+        return TOKEN_LBRACKET;
+    if (c == ']')
+        return TOKEN_RBRACKET;
+    if (c == '+')
+        return TOKEN_ADD;
+    if (c == '-')
+        return TOKEN_SUB;
+    if (c == '*')
+        return TOKEN_MUL;
+    if (c == '/')
+        return TOKEN_DIV;
+    if (c == '%')
+        return TOKEN_MOD;
+    if (c == '^') 
+        return (peak_char(s+1) == '^') ? TOKEN_EXPONENT : TOKEN_EXPONENT; //TOKEN_XOR
+    if (c == '>') 
+        return (peak_char(s+1) == '=') ? TOKEN_GT : TOKEN_GEQ; 
+    if (c == '<') 
+        return (peak_char(s+1) == '=') ? TOKEN_LT : TOKEN_LEQ; 
+    if (c == '=') 
+        return (peak_char(s+1) == '=') ? TOKEN_ASSIGN : TOKEN_EQ;
+    if (c == '!' || peak_char(s+1) == '=') 
+        return TOKEN_NEQ;
+    // if (c == '!') 
+    //     return (peak_char(s+1) == '=') ? TOKEN_ASSIGN : TOKEN_NEQ; //TOKEN_NOT
+    // if (c == '|') 
+    //     return (peak_char(s+1) == '|') ? TOKEN_ASSIGN : TOKEN_NEQ; //TOKEN_NOT
+    if (c == 'w' 
+        && peak_char(s+1) == 'h' 
+        && peak_char(s+2) == 'i' 
+        && peak_char(s+3) == 'l' 
+        && peak_char(s+4) == 'e'
+        && !is_letter(peak_char(s+5))) return TOKEN_WHILE;
+    if (c == 'i' 
+        && peak_char(s+1) == 'f' 
+        && !is_letter(peak_char(s+2))) return TOKEN_IF;
+    if (c == 'e' 
+        && peak_char(s+1) == 'l' 
+        && peak_char(s+2) == 's' 
+        && peak_char(s+3) == 'e' 
+        && !is_letter(peak_char(s+4))) return TOKEN_ELSE;
+    if (c == 'e' 
+        && peak_char(s+1) == 'l' 
+        && peak_char(s+2) == 's' 
+        && peak_char(s+3) == 'e' 
+        && !is_letter(peak_char(s+4))) return TOKEN_ELSE;
+    if (c == 'r' 
+        && peak_char(s+1) == 'e' 
+        && peak_char(s+2) == 't' 
+        && peak_char(s+3) == 'u'
+        && peak_char(s+4) == 'r'
+        && peak_char(s+5) == 'n' 
+        && !is_letter(peak_char(s+6))) return TOKEN_RETURN;
+    if (is_letter(c))
+        return TOKEN_ID;
+    if (is_numeric(c))
+        return TOKEN_NUM;
+    if (c == ' ')
+        return peak_tok(s+1);
+    if (c == '\n')
+        return peak_tok(s+1);
+}
+
+
+
 
 const int NUMBER_OF_TOKENS = TOKEN_NEWLINE;
 
