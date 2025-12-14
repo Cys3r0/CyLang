@@ -19,10 +19,12 @@
 
 
 char peak_char(char * source) {
+    //add \0 check
     return source[0];
 }
 
 char take_char(char ** source) {
+    //add \0 check
     char c = (*source)[0];
     (*source)++;
     return c;
@@ -100,11 +102,6 @@ enum TokenType peak_tok(char * s) {
         && peak_char(s+2) == 's' 
         && peak_char(s+3) == 'e' 
         && !is_letter(peak_char(s+4))) return TOKEN_ELSE;
-    if (c == 'e' 
-        && peak_char(s+1) == 'l' 
-        && peak_char(s+2) == 's' 
-        && peak_char(s+3) == 'e' 
-        && !is_letter(peak_char(s+4))) return TOKEN_ELSE;
     if (c == 'r' 
         && peak_char(s+1) == 'e' 
         && peak_char(s+2) == 't' 
@@ -140,8 +137,14 @@ typedef struct {
 } neo_token_t;
 
 
-token_t * create_token(enum TokenType token_type, int line, int col, char * lexeme, int value * ) {
-    
+token_t * neo_create_token(enum TokenType token_type, int line, int col, char * lexeme, int value) {
+    token_t * tok = malloc(sizeof(token_t));
+    tok->token_type = token_type;
+    tok->line = line;
+    tok->col = col;
+    tok->lexeme = lexeme;
+    tok->value;
+    return tok;
 }
 
 token_t * take_tok(lexer_t * lex) {
@@ -182,12 +185,12 @@ token_t * take_tok(lexer_t * lex) {
         return (peak_char(s+1) == '=') ? TOKEN_LT : TOKEN_LEQ; 
     if (c == '=') 
         return (peak_char(s+1) == '=') ? TOKEN_ASSIGN : TOKEN_EQ;
-    if (c == '!' || peak_char(s+1) == '=') 
-        return TOKEN_NEQ;
+    if (c == '!' 
+        || peak_char(s+1) == '=') return TOKEN_NEQ;
     // if (c == '!') 
     //     return (peak_char(s+1) == '=') ? TOKEN_ASSIGN : TOKEN_NEQ; //TOKEN_NOT
     // if (c == '|') 
-    //     return (peak_char(s+1) == '|') ? TOKEN_ASSIGN : TOKEN_NEQ; //TOKEN_NOT
+    //     return (peak_char(s+1) == '|') ? TOKEN_ASSIGN : TOKEN_NEQ; //TOKEN_BIT_AND
     if (c == 'w' 
         && peak_char(s+1) == 'h' 
         && peak_char(s+2) == 'i' 
@@ -197,11 +200,6 @@ token_t * take_tok(lexer_t * lex) {
     if (c == 'i' 
         && peak_char(s+1) == 'f' 
         && !is_letter(peak_char(s+2))) return TOKEN_IF;
-    if (c == 'e' 
-        && peak_char(s+1) == 'l' 
-        && peak_char(s+2) == 's' 
-        && peak_char(s+3) == 'e' 
-        && !is_letter(peak_char(s+4))) return TOKEN_ELSE;
     if (c == 'e' 
         && peak_char(s+1) == 'l' 
         && peak_char(s+2) == 's' 
