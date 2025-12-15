@@ -8,6 +8,7 @@
 
 
 // LATER:
+// peak_token could just be take token that memoizes the tokens for later 
 // Move all regex stuff into init_lexer
 // memoize peak_n_tokens
 // add a take_token_specifc, which takes expects a certain token which is passed to it (or include this in skip_token)
@@ -38,7 +39,7 @@ int is_letter(char c) {
     return 'a' <= c <= 'z' || 'A' <= c <= 'Z' ;
 }
 
-int is_letter(char c) {
+int is_alphanumeric(char c) {
     return 'a' <= c <= 'z' || 'A' <= c <= 'Z' || '0' <= c <= '9';
 }
 
@@ -47,6 +48,17 @@ enum TokenType peak_tok(char * s) {
     // which it already should to be honest
 
     char c = peak_char(s);
+    
+    int i = 0; 
+    while (!valid_char) {
+        
+        if (c == ' ' || c == '\n') {
+            i++;
+            c = peak_char(s+i);
+        } else 
+            valid_char = 1;
+    }
+
 
     if (c == ';')
         return TOKEN_SEMI;
@@ -113,10 +125,6 @@ enum TokenType peak_tok(char * s) {
         return TOKEN_ID;
     if (is_numeric(c))
         return TOKEN_NUM;
-    if (c == ' ')
-        return peak_tok(s+1);
-    if (c == '\n')
-        return peak_tok(s+1);
 }
 
 
@@ -137,89 +145,138 @@ typedef struct {
 } neo_token_t;
 
 
-token_t * neo_create_token(enum TokenType token_type, int line, int col, char * lexeme, int value) {
+neo_token_t * neo_create_token(enum TokenType token_type, int line, int col, char * lexeme, int value) {
     token_t * tok = malloc(sizeof(token_t));
     tok->token_type = token_type;
     tok->line = line;
     tok->col = col;
-    tok->lexeme = lexeme;
-    tok->value;
+    if (lexeme) 
+        tok->lexeme = lexeme;
+    else 
+        tok->value = value;
     return tok;
 }
 
-token_t * take_tok(lexer_t * lex) {
-    char * s = lex->file_text;
-    char c = peak_char(s);
+neo_token_t * take_tok(neo_lexer_t * lex) {
+    enum TokenType token_type;
+    char * s = lex->source;
+    char * lexeme = NULL;
+    int col;
+    int line;
+    int value = 0;
+    enum TokenType tok_type;
+    unsigned int valid_char = 0;
+    char c = take_char(s);
+
+    // goto here in case of whitespace would be nice
+
+    while (c == ' ' || c == '\n') {
+        if (c == ' ') {
+            lex->col++;
+        } else {
+            lex->row++;;
+            lex->col=1;
+        }
+        c = take_char(s);
+    }
 
     if (c == ';')
         return TOKEN_SEMI;
-    if (c == ',')
+    else if (c == ',')
         return TOKEN_COMMA;
-    if (c == '(')
+    else if (c == '(')
         return TOKEN_LPAR;
-    if (c == ')')
+    else if (c == ')')
         return TOKEN_RPAR;
-    if (c == '{')
+    else if (c == '{')
         return TOKEN_LWING;
-    if (c == '}')
+    else if (c == '}')
         return TOKEN_RWING;
-    if (c == '[')
+    else if (c == '[')
         return TOKEN_LBRACKET;
-    if (c == ']')
+    else if (c == ']')
         return TOKEN_RBRACKET;
-    if (c == '+')
+    else if (c == '+')
         return TOKEN_ADD;
-    if (c == '-')
+    else if (c == '-')
         return TOKEN_SUB;
-    if (c == '*')
+    else if (c == '*')
         return TOKEN_MUL;
-    if (c == '/')
+    else if (c == '/')
         return TOKEN_DIV;
-    if (c == '%')
+    else if (c == '%')
         return TOKEN_MOD;
-    if (c == '^') 
+    else if (c == '^') 
         return (peak_char(s+1) == '^') ? TOKEN_EXPONENT : TOKEN_EXPONENT; //TOKEN_XOR
-    if (c == '>') 
+    else if (c == '>') 
         return (peak_char(s+1) == '=') ? TOKEN_GT : TOKEN_GEQ; 
-    if (c == '<') 
+    else if (c == '<') 
         return (peak_char(s+1) == '=') ? TOKEN_LT : TOKEN_LEQ; 
-    if (c == '=') 
+    else if (c == '=') 
         return (peak_char(s+1) == '=') ? TOKEN_ASSIGN : TOKEN_EQ;
-    if (c == '!' 
+    else if (c == '!' 
         || peak_char(s+1) == '=') return TOKEN_NEQ;
-    // if (c == '!') 
+    // else if (c == '!') 
     //     return (peak_char(s+1) == '=') ? TOKEN_ASSIGN : TOKEN_NEQ; //TOKEN_NOT
-    // if (c == '|') 
+    // else if (c == '|') 
     //     return (peak_char(s+1) == '|') ? TOKEN_ASSIGN : TOKEN_NEQ; //TOKEN_BIT_AND
-    if (c == 'w' 
+    else if (c == 'w' 
         && peak_char(s+1) == 'h' 
         && peak_char(s+2) == 'i' 
         && peak_char(s+3) == 'l' 
         && peak_char(s+4) == 'e'
         && !is_letter(peak_char(s+5))) return TOKEN_WHILE;
-    if (c == 'i' 
+    else if (c == 'i' 
         && peak_char(s+1) == 'f' 
         && !is_letter(peak_char(s+2))) return TOKEN_IF;
-    if (c == 'e' 
+    else if (c == 'e' 
         && peak_char(s+1) == 'l' 
         && peak_char(s+2) == 's' 
         && peak_char(s+3) == 'e' 
         && !is_letter(peak_char(s+4))) return TOKEN_ELSE;
-    if (c == 'r' 
+    else if (c == 'r' 
         && peak_char(s+1) == 'e' 
         && peak_char(s+2) == 't' 
         && peak_char(s+3) == 'u'
         && peak_char(s+4) == 'r'
         && peak_char(s+5) == 'n' 
         && !is_letter(peak_char(s+6))) return TOKEN_RETURN;
-    if (is_letter(c))
-        return TOKEN_ID;
-    if (is_numeric(c))
-        return TOKEN_NUM;
-    if (c == ' ')
-        return peak_tok(s+1);
-    if (c == '\n')
-        return peak_tok(s+1);
+    else if (is_letter(c)) {
+        token_type = TOKEN_ID;
+        int i = 1;
+        while (is_alphanumeric(peak_char(s+1))) 
+            i++;
+
+        lex->line += i;        
+        lexeme = malloc(50);
+        for (size_t j = 0; j < s+i; j++) 
+            lexeme[j] = s[j];
+        lexeme[i] = '\0';
+    }
+    else if (is_numeric(c)) {
+        token_type = TOKEN_NUM;
+        int i = 1;
+        while (is_numeric(peak_char(s+1))) {
+            i++;
+        }
+        if (is_alphanumeric(peak_char(s+1))) 
+            printf("Incorrect numeral syntax");
+            
+        lex->line += i;
+        char number[50];
+        for (size_t j = 0; j < s+i; j++) 
+            number[j] = s[j];
+        number[i] = '\0';
+        value = atoi(number); 
+    }
+
+    return neo_create_token(
+        token_type,
+        lex->line;
+        lex->col;
+        lexeme,
+        value,
+    )
 }
 
 
@@ -520,8 +577,8 @@ token_t * take_token(lexer_t * lex) {
 }
 
 
-int test_main() {
-    char * file_text = "if (abs == 10) , A - B       print(10000); while (list) {a[]}";
+int main() {
+    char * file_text = "9A if (abs == 10) , A - B       print(10000); while (list) {a[]}";
     regex_t regex;
     regmatch_t m[NUMBER_OF_TOKENS+1];
     regcomp(&regex, REGEX_RULES, REG_EXTENDED);
