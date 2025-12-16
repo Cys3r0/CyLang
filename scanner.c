@@ -157,18 +157,31 @@ neo_token_t * neo_create_token(enum TokenType token_type, int line, int col, cha
     return tok;
 }
 
+neo_token_t * lex_keyword(neo_lexer_t * lex, char * keyword, int key_len) {
+    for (size_t i = 0; i < key_len-1; i++) {
+        if (lex->source[i] != keyword[i+1]) {
+            //hmmmm
+        }
+    }
+}
+
 neo_token_t * take_tok(neo_lexer_t * lex) {
     enum TokenType token_type;
     char * s = lex->source;
     char * lexeme = NULL;
     int col;
     int line;
+    int start_col = lex->col;
     int value = 0;
     enum TokenType tok_type;
     unsigned int valid_char = 0;
     char c = take_char(s);
 
-    // goto here in case of whitespace would be nice
+    // things to consider:
+    // which tokens actually need to become token_t? Probably no token which doesn't have a value or 
+    // variable lexeme associated with it. As such maybe all non-variable or numeral should just return
+    // a NULL which would essentially be the same as a skip, which all such tokens should be anyway.
+    // Or maybe I am overthinking this
 
     while (c == ' ' || c == '\n') {
         if (c == ' ') {
@@ -181,66 +194,66 @@ neo_token_t * take_tok(neo_lexer_t * lex) {
     }
 
     if (c == ';')
-        return TOKEN_SEMI;
+        token_type = TOKEN_SEMI;
     else if (c == ',')
-        return TOKEN_COMMA;
+        token_type = TOKEN_COMMA;
     else if (c == '(')
-        return TOKEN_LPAR;
+        token_type = TOKEN_LPAR;
     else if (c == ')')
-        return TOKEN_RPAR;
+        token_type = TOKEN_RPAR;
     else if (c == '{')
-        return TOKEN_LWING;
+        token_type = TOKEN_LWING;
     else if (c == '}')
-        return TOKEN_RWING;
+        token_type = TOKEN_RWING;
     else if (c == '[')
-        return TOKEN_LBRACKET;
+        token_type = TOKEN_LBRACKET;
     else if (c == ']')
-        return TOKEN_RBRACKET;
+        token_type = TOKEN_RBRACKET;
     else if (c == '+')
-        return TOKEN_ADD;
+        token_type = TOKEN_ADD;
     else if (c == '-')
-        return TOKEN_SUB;
+        token_type = TOKEN_SUB;
     else if (c == '*')
-        return TOKEN_MUL;
+        token_type = TOKEN_MUL;
     else if (c == '/')
-        return TOKEN_DIV;
+        token_type = TOKEN_DIV;
     else if (c == '%')
-        return TOKEN_MOD;
+        token_type = TOKEN_MOD;
     else if (c == '^') 
-        return (peak_char(s+1) == '^') ? TOKEN_EXPONENT : TOKEN_EXPONENT; //TOKEN_XOR
+        token_type = (peak_char(s+1) == '^') ? TOKEN_EXPONENT : TOKEN_EXPONENT; //TOKEN_XOR
     else if (c == '>') 
-        return (peak_char(s+1) == '=') ? TOKEN_GT : TOKEN_GEQ; 
+        token_type = (peak_char(s+1) == '=') ? TOKEN_GT : TOKEN_GEQ; 
     else if (c == '<') 
-        return (peak_char(s+1) == '=') ? TOKEN_LT : TOKEN_LEQ; 
+        token_type = (peak_char(s+1) == '=') ? TOKEN_LT : TOKEN_LEQ; 
     else if (c == '=') 
-        return (peak_char(s+1) == '=') ? TOKEN_ASSIGN : TOKEN_EQ;
+        token_type = (peak_char(s+1) == '=') ? TOKEN_ASSIGN : TOKEN_EQ;
     else if (c == '!' 
-        || peak_char(s+1) == '=') return TOKEN_NEQ;
+        || peak_char(s+1) == '=') token_type = TOKEN_NEQ;
     // else if (c == '!') 
-    //     return (peak_char(s+1) == '=') ? TOKEN_ASSIGN : TOKEN_NEQ; //TOKEN_NOT
+    //     token_type = (peak_char(s+1) == '=') ? TOKEN_ASSIGN : TOKEN_NEQ; //TOKEN_NOT
     // else if (c == '|') 
-    //     return (peak_char(s+1) == '|') ? TOKEN_ASSIGN : TOKEN_NEQ; //TOKEN_BIT_AND
+    //     token_type = (peak_char(s+1) == '|') ? TOKEN_ASSIGN : TOKEN_NEQ; //TOKEN_BIT_AND
     else if (c == 'w' 
         && peak_char(s+1) == 'h' 
         && peak_char(s+2) == 'i' 
         && peak_char(s+3) == 'l' 
         && peak_char(s+4) == 'e'
-        && !is_letter(peak_char(s+5))) return TOKEN_WHILE;
+        && !is_letter(peak_char(s+5))) token_type = TOKEN_WHILE;
     else if (c == 'i' 
         && peak_char(s+1) == 'f' 
-        && !is_letter(peak_char(s+2))) return TOKEN_IF;
+        && !is_letter(peak_char(s+2))) token_type = TOKEN_IF;
     else if (c == 'e' 
         && peak_char(s+1) == 'l' 
         && peak_char(s+2) == 's' 
         && peak_char(s+3) == 'e' 
-        && !is_letter(peak_char(s+4))) return TOKEN_ELSE;
+        && !is_letter(peak_char(s+4))) token_type = TOKEN_ELSE;
     else if (c == 'r' 
         && peak_char(s+1) == 'e' 
         && peak_char(s+2) == 't' 
         && peak_char(s+3) == 'u'
         && peak_char(s+4) == 'r'
         && peak_char(s+5) == 'n' 
-        && !is_letter(peak_char(s+6))) return TOKEN_RETURN;
+        && !is_letter(peak_char(s+6))) token_type = TOKEN_RETURN;
     else if (is_letter(c)) {
         token_type = TOKEN_ID;
         int i = 1;
@@ -261,7 +274,7 @@ neo_token_t * take_tok(neo_lexer_t * lex) {
         }
         if (is_alphanumeric(peak_char(s+1))) 
             printf("Incorrect numeral syntax");
-            
+
         lex->line += i;
         char number[50];
         for (size_t j = 0; j < s+i; j++) 
