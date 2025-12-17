@@ -20,14 +20,15 @@
 
 
 char peak_char(char * source) {
-    //add \0 check
-    return source[0];
+    return source[0]; // Is this necessary?
 }
 
-char take_char(char ** source) {
-    //add \0 check
-    char c = (*source)[0];
-    (*source)++;
+char take_char(char ** source, neo_lexer_t * lex) {
+    char c = lex->source[0];
+
+    if (c == '\0') lex->source = NULL;
+    else lex->source++;
+    
     return c;
 }
 
@@ -125,6 +126,8 @@ enum TokenType peak_tok(char * s) {
         return TOKEN_ID;
     if (is_numeric(c))
         return TOKEN_NUM;
+    if (c == '\0') 
+        return TOKEN_EOF;
 }
 
 
@@ -282,6 +285,9 @@ neo_token_t * take_tok(neo_lexer_t * lex) {
         number[i] = '\0';
         value = atoi(number); 
     }
+    if (c == '\0') 
+        token_type = TOKEN_EOF;
+
 
     return neo_create_token(
         token_type,
