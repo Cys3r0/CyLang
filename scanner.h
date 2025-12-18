@@ -36,6 +36,7 @@ enum TokenType {
     TOKEN_EXPONENT, 
     TOKEN_WHITESPACE, 
     TOKEN_NEWLINE, 
+    TOKEN_EOF,
 };
 
 
