@@ -4,10 +4,11 @@
 #include "scanner.h"
 #include <regex.h>
 
+#define MAX_VECTOR_LENGTH 20
 
 
-
-// LATER:
+// TODO:
+// implement ring buffer for the peaked that self, resize when within range (could work :))
 // Move all regex stuff into init_lexer
 // memoize peak_n_tokens
 // add a take_token_specifc, which takes expects a certain token which is passed to it (or include this in skip_token)
@@ -64,7 +65,6 @@ typedef struct {
     char * source;
     int col;
     int row;
-    int peaked_count;
     tok_queue_t peaked;
 } neo_lexer_t;
 
@@ -79,7 +79,27 @@ typedef struct {
     tok_node_t * next;
 } tok_node_t;
 
-void tok_list_add(neo_token_t * tok, lexer_t * lex) {
+typedef struct {
+    token_t ** data;
+    int buf_size;
+    int length;
+    int write_i;
+    int read_i;
+} tok_ringbuf_t;
+
+void ringbuf_add(tok_ringbuf_t * rb, token_t * tok) {
+    rb->write_i
+    
+
+}
+
+void ringbuf_resize( ) {
+    
+}
+
+
+
+void peaked_add(neo_token_t * tok, lexer_t * lex) {
     tok_node_t * node = calloc(1, sizeof(tok_node_t));
     node->tok = tok;
 
@@ -93,7 +113,7 @@ void tok_list_add(neo_token_t * tok, lexer_t * lex) {
     }
 }
 
-token_t * tok_list_take(neo_lexer_t * lex) {
+token_t * peaked_take(neo_lexer_t * lex) {
     token_t * ret_tok;
     if (!lex.peaked->head) 
         return NULL;
@@ -273,12 +293,37 @@ neo_token_t * scan_next_tok(neo_lexer_t * lex) {
 }
 
 
+enum TokenType peaked_get_nth(neo_lexer_t * lex, int n) {
+    tok_node_t curr = lex.peaked->head;
+    for (size_t i = 1; i < n; i++) 
+        curr = curr->next;
+
+    return curr->tok
+}
+
+enum TokenType peak_n_tok(neo_lexer_t * lex, int n) {
+    int to_scan = n - lex.peaked.count;
+    if (to_scan > 0) 
+        return peaked_get_nth(lex, to_scan);
+    
+    for (size_t i = 0; i < -; i++)
+    {
+        /* code */
+    }
+    
+    
+}
+
+
 enum TokenType peak_tok(neo_lexer_t * lex) {
-    // wraps and memoizes scan_next_tok via the linked list
+    
 }
 
 enum TokenType take_tok(neo_lexer_t * lex) {
-    // wraps scan_next_tok or gets memoized toks
+    if (lex.peaked.count > 0) 
+        return peaked_take(lex);
+    
+    return scan_next_tok(lex);
 }
 
 
