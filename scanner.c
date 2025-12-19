@@ -65,21 +65,54 @@ typedef struct {
     int col;
     int row;
     int peaked_count;
-    struct tok_node * peaked;
+    tok_queue_t peaked;
 } neo_lexer_t;
 
-struct tok_node {
-    neo_token_t tok;
-    struct tok_node * next;
-};
+typedef struct {
+    int count;
+    tok_node_t tail;
+    tok_node_t head;
+} tok_queue_t;
+
+typedef struct {
+    neo_token_t * tok;
+    tok_node_t * next;
+} tok_node_t;
+
+void tok_list_add(neo_token_t * tok, lexer_t * lex) {
+    tok_node_t * node = calloc(1, sizeof(tok_node_t));
+    node->tok = tok;
+
+    lex.peaked->count++;
+    if (!lex->peaked->head) {
+        lex.peaked->head = node;
+        lex.peaked->tail = node;
+    } else {
+        lex.peaked->tail->next = node;
+        lex.peaked->tail = node;
+    }
+}
+
+token_t * tok_list_take(neo_lexer_t * lex) {
+    token_t * ret_tok;
+    if (!lex.peaked->head) 
+        return NULL;
+    else {
+        lex.peaked->count--;
+        ret_tok = lex.peaked->head->tok;
+        if (lex.peaked->head == lex.peaked->tail) 
+            lex.peaked->head =  lex.peaked->tail = NULL;
+        else 
+            lex.peaked->head = lex.peaked->tail;
+    }
+}
 
 lexer_t * neo_create_lexer(char * source) {
-    lexer_t * lex = calloc(1, sizeof(lexer_t))
+    lexer_t * lex = calloc(1, sizeof(lexer_t));
     lex->source = source;
     lex->col = 1;
     lex->row = 1;
-    lex->peaked_count = 0;
-    lex->peaked = NULL;
+    lex->peaked = calloc(1, sizeof(tok_queue_t));
 }
 
 neo_token_t * neo_create_token(enum TokenType token_type, int line, int col, char * lexeme, int value) {
@@ -95,6 +128,7 @@ neo_token_t * neo_create_token(enum TokenType token_type, int line, int col, cha
 }
 
 neo_token_t * scan_next_tok(neo_lexer_t * lex) {
+    // Current peaking with source[k] can segfault 
     enum TokenType token_type;
     char * lexeme = NULL;
     int col;
