@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 #include "scanner.h"
 #include <regex.h>
 
@@ -64,6 +65,7 @@ typedef struct {
 
 typedef struct {
     char * source;
+    int source_len;
     int col;
     int row;
     tok_ringbuf_t peaked;
@@ -75,11 +77,16 @@ typedef struct {
     int read_i;
 } tok_ringbuf_t;
 
-int ringbuf_put(tok_ringbuf_t * rb, token_t * tok) {
-    if ((rb->write_i + 1) % rb->buf_size == rb->read_i) 
-        return 0;
 
-    rb->write_i = rb->write_i+1 % rb->buf_size;
+int ringbuf_put(tok_ringbuf_t * rb, token_t * tok) {
+    assert((rb->write_i + 1) % rb->buf_size != rb->read_i);
+
+    if ((rb->write_i + 1) % rb->buf_size == rb->read_i) {
+        printf("Error: ring buffer full.");
+        exit(EXIT_FAILURE);
+    }
+
+    rb->write_i = (rb->write_i + 1) % rb->buf_size;
     rb->data[rb->write_i] = tok;
     return 1;
 }
@@ -89,12 +96,18 @@ token_t * ringbuf_get(tok_ringbuf_t * rb) {
         return NULL;
 
     token_t * ret_tok = rb->data[rb->read_i];
-    rb->read_i = rb->read_i + 1 % rb->buf_size;
+    rb->read_i = (rb->read_i + 1) % rb->buf_size;
     return ret_tok;
 }
 
 token_t * ringbuf_get_n(tok_ringbuf_t * rb, int n) {
-    // IMPLEMENT THIS
+    int length = (rb->write_i >= rb->read_i) 
+        ? rb->write_i - rb->read_i 
+        : RINGBUF_SIZE - rb->read_i + rb->write_i;
+
+    if (n <= length)
+        return rb->data[(rb->read_i + n - 1) % RINGBUF_SIZE];
+    return NULL;
 }
 
 tok_ringbuf_t create_ringbuf() {
@@ -106,9 +119,10 @@ tok_ringbuf_t create_ringbuf() {
 }
 
 
-neo_lexer_t * neo_create_lexer(char * source) {
+neo_lexer_t * neo_create_lexer(char * source, int source_len) {
     neo_lexer_t * lex = calloc(1, sizeof(neo_lexer_t));
     lex->source = source;
+    lex->source_len = source_len;
     lex->col = 1;
     lex->row = 1;
     lex->peaked = calloc(1, sizeof(tok_ringbuf_t));
