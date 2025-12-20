@@ -5,6 +5,7 @@
 #include <regex.h>
 
 #define MAX_VECTOR_LENGTH 20
+#define RINGBUF_SIZE 20
 
 
 // TODO:
@@ -65,74 +66,53 @@ typedef struct {
     char * source;
     int col;
     int row;
-    tok_queue_t peaked;
+    tok_ringbuf_t peaked;
 } neo_lexer_t;
 
 typedef struct {
-    int count;
-    tok_node_t tail;
-    tok_node_t head;
-} tok_queue_t;
-
-typedef struct {
-    neo_token_t * tok;
-    tok_node_t * next;
-} tok_node_t;
-
-typedef struct {
     token_t ** data;
-    int buf_size;
-    int length;
     int write_i;
     int read_i;
 } tok_ringbuf_t;
 
-void ringbuf_add(tok_ringbuf_t * rb, token_t * tok) {
-    rb->write_i
-    
+int ringbuf_put(tok_ringbuf_t * rb, token_t * tok) {
+    if ((rb->write_i + 1) % rb->buf_size == rb->read_i) 
+        return 0;
 
+    rb->write_i = rb->write_i+1 % rb->buf_size;
+    rb->data[rb->write_i] = tok;
+    return 1;
 }
 
-void ringbuf_resize( ) {
-    
-}
-
-
-
-void peaked_add(neo_token_t * tok, lexer_t * lex) {
-    tok_node_t * node = calloc(1, sizeof(tok_node_t));
-    node->tok = tok;
-
-    lex.peaked->count++;
-    if (!lex->peaked->head) {
-        lex.peaked->head = node;
-        lex.peaked->tail = node;
-    } else {
-        lex.peaked->tail->next = node;
-        lex.peaked->tail = node;
-    }
-}
-
-token_t * peaked_take(neo_lexer_t * lex) {
-    token_t * ret_tok;
-    if (!lex.peaked->head) 
+token_t * ringbuf_get(tok_ringbuf_t * rb) {
+    if (rb->write_i == rb->read_i) 
         return NULL;
-    else {
-        lex.peaked->count--;
-        ret_tok = lex.peaked->head->tok;
-        if (lex.peaked->head == lex.peaked->tail) 
-            lex.peaked->head =  lex.peaked->tail = NULL;
-        else 
-            lex.peaked->head = lex.peaked->tail;
-    }
+
+    token_t * ret_tok = rb->data[rb->read_i];
+    rb->read_i = rb->read_i + 1 % rb->buf_size;
+    return ret_tok;
 }
 
-lexer_t * neo_create_lexer(char * source) {
-    lexer_t * lex = calloc(1, sizeof(lexer_t));
+token_t * ringbuf_get_n(tok_ringbuf_t * rb, int n) {
+    // IMPLEMENT THIS
+}
+
+tok_ringbuf_t create_ringbuf() {
+    tok_ringbuf_t rb;
+    rb->write_i = 0;
+    rb->read_i = 0;
+    rb->data = calloc(RINGBUF_SIZE, sizeof(token_t *));
+    return rb;
+}
+
+
+neo_lexer_t * neo_create_lexer(char * source) {
+    neo_lexer_t * lex = calloc(1, sizeof(neo_lexer_t));
     lex->source = source;
     lex->col = 1;
     lex->row = 1;
-    lex->peaked = calloc(1, sizeof(tok_queue_t));
+    lex->peaked = calloc(1, sizeof(tok_ringbuf_t));
+    return lex;
 }
 
 neo_token_t * neo_create_token(enum TokenType token_type, int line, int col, char * lexeme, int value) {
