@@ -10,7 +10,7 @@
 
 
 // TODO:
-// implement ring buffer for the peaked that self, resize when within range (could work :))
+// impl peak token and take token
 // Move all regex stuff into init_lexer
 // memoize peak_n_tokens
 // add a take_token_specifc, which takes expects a certain token which is passed to it (or include this in skip_token)
@@ -20,24 +20,22 @@
 // add EXPONENT, (LOGICAL) NOT AND OR, (BITWISE) NOT AND OR XOR BITSHIFTS, INCREMENT, DECREMENT tokens
 
 // Useless wrapper function right now
-char peak_char(char * source) {
-    return source[0]; // Is this necessary?
+char peak_char(int n, neo_lexer_t * lex) {
+    if (lex->source_i + n <= lex->source_len) 
+        return lex->source[lex->source_i + n]; 
+    return '\0'; // should never match with value
 }
 
 char take_char(char ** source, neo_lexer_t * lex) {
-    char c = lex->source[0];
+    char c = lex->source[lex->source_i];
 
-    if (c == '\0') 
-        lex->source = NULL;
-    else {
-        if (c == '\n') {
-            lex->row++;    
-            lex->col = 1;
-        } else {
-            lex->col++;
-        }
-        lex->source++;
+    if (c == '\n') {
+        lex->row++;    
+        lex->col = 1;
+    } else {
+        lex->col++;
     }
+    lex->source_i++;
     
     return c;
 }
@@ -66,6 +64,7 @@ typedef struct {
 typedef struct {
     char * source;
     int source_len;
+    int source_i;
     int col;
     int row;
     tok_ringbuf_t peaked;
@@ -73,6 +72,7 @@ typedef struct {
 
 typedef struct {
     token_t ** data;
+    int length;
     int write_i;
     int read_i;
 } tok_ringbuf_t;
@@ -87,6 +87,7 @@ int ringbuf_put(tok_ringbuf_t * rb, token_t * tok) {
     }
 
     rb->write_i = (rb->write_i + 1) % rb->buf_size;
+    rb->length++;
     rb->data[rb->write_i] = tok;
     return 1;
 }
@@ -97,15 +98,16 @@ token_t * ringbuf_get(tok_ringbuf_t * rb) {
 
     token_t * ret_tok = rb->data[rb->read_i];
     rb->read_i = (rb->read_i + 1) % rb->buf_size;
+    rb->length--;
     return ret_tok;
 }
 
-token_t * ringbuf_get_n(tok_ringbuf_t * rb, int n) {
-    int length = (rb->write_i >= rb->read_i) 
-        ? rb->write_i - rb->read_i 
-        : RINGBUF_SIZE - rb->read_i + rb->write_i;
+token_t * ringbuf_peak(tok_ringbuf_t * rb) {
+    return (rb->length > 0) ? rb->data[rb->read_i] : NULL ;
+}
 
-    if (n <= length)
+token_t * ringbuf_get_n(tok_ringbuf_t * rb, int n) {
+    if (n <= rb->length)
         return rb->data[(rb->read_i + n - 1) % RINGBUF_SIZE];
     return NULL;
 }
@@ -125,7 +127,7 @@ neo_lexer_t * neo_create_lexer(char * source, int source_len) {
     lex->source_len = source_len;
     lex->col = 1;
     lex->row = 1;
-    lex->peaked = calloc(1, sizeof(tok_ringbuf_t));
+    lex->peaked = create_ringbuf();
     return lex;
 }
 
@@ -210,42 +212,42 @@ neo_token_t * scan_next_tok(neo_lexer_t * lex) {
     // else if (c == '|') 
     //     token_type = (peak_char(s+1) == '|') ? TOKEN_ASSIGN : TOKEN_NEQ; //TOKEN_BIT_AND
     else if (c == 'w' 
-        && lex->source[0] == 'h' 
-        && lex->source[2] == 'i' 
-        && lex->source[3] == 'l' 
-        && lex->source[4] == 'e'
-        && !is_letter(lex->source[5])) {
+        && peak_char(0, lex) == 'h' 
+        && peak_char(2, lex) == 'i' 
+        && peak_char(3, lex) == 'l' 
+        && peak_char(4, lex) == 'e'
+        && !is_letter(peak_char(5, lex))) {
             token_type = TOKEN_WHILE;  
             end_offset = 4;
     }
     else if (c == 'i' 
-        && lex->source[0] == 'f' 
-        && !is_letter(lex->source[1])) {
+        && peak_char(0, lex) == 'f' 
+        && !is_letter(peak_char(1, lex))) {
             token_type = TOKEN_IF;
             end_offset = 1;
     }
     else if (c == 'e' 
-        && lex->source[0] == 'l' 
-        && lex->source[1] == 's' 
-        && lex->source[2] == 'e' 
-        && !is_letter(lex->source[3])) {
+        && peak_char(0, lex) == 'l' 
+        && peak_char(1, lex) == 's' 
+        && peak_char(2, lex) == 'e' 
+        && !is_letter(peak_char(3, lex))) {
             token_type = TOKEN_ELSE;
             end_offset = 3;
     }
     else if (c == 'r' 
-        && lex->source[0] == 'e' 
-        && lex->source[1] == 't' 
-        && lex->source[2] == 'u'
-        && lex->source[3] == 'r'
-        && lex->source[4] == 'n' 
-        && !is_letter(lex->source[5])) {
+        && peak_char(0, lex) == 'e' 
+        && peak_char(1, lex) == 't' 
+        && peak_char(2, lex) == 'u'
+        && peak_char(3, lex) == 'r'
+        && peak_char(4, lex) == 'n' 
+        && !is_letter(peak_char(5, lex))) {
             token_type = TOKEN_RETURN;
             end_offset = 5;
     }
     else if (is_letter(c)) {
         token_type = TOKEN_ID;
         int i = 0;
-        while (is_alphanumeric(lex->source[0])) 
+        while (is_alphanumeric(peak_char(0, lex))) 
             i++;
 
         lexeme = malloc(50);
@@ -256,10 +258,10 @@ neo_token_t * scan_next_tok(neo_lexer_t * lex) {
     else if (is_numeric(c)) {
         token_type = TOKEN_NUM;
         int i = 1;
-        while (is_numeric(lex->source[i])) 
+        while (is_numeric(peak_char(i, lex))) 
             i++;
 
-        if (is_alphanumeric(lex->source[i])) 
+        if (is_alphanumeric(peak_char(i, lex))) 
             printf("Incorrect numeral syntax");
         if (u >= 50)
             printf("Number has too many characters");
@@ -287,7 +289,7 @@ neo_token_t * scan_next_tok(neo_lexer_t * lex) {
 }
 
 
-enum TokenType peaked_get_nth(neo_lexer_t * lex, int n) {
+enum TokenType peak_nth_tok(neo_lexer_t * lex, int n) {
     tok_node_t curr = lex.peaked->head;
     for (size_t i = 1; i < n; i++) 
         curr = curr->next;
@@ -295,7 +297,7 @@ enum TokenType peaked_get_nth(neo_lexer_t * lex, int n) {
     return curr->tok
 }
 
-enum TokenType peak_n_tok(neo_lexer_t * lex, int n) {
+enum TokenType peak_tok(neo_lexer_t * lex, int n) {
     int to_scan = n - lex.peaked.count;
     if (to_scan > 0) 
         return peaked_get_nth(lex, to_scan);
@@ -310,7 +312,7 @@ enum TokenType peak_n_tok(neo_lexer_t * lex, int n) {
 
 
 enum TokenType peak_tok(neo_lexer_t * lex) {
-    
+    if ()
 }
 
 enum TokenType take_tok(neo_lexer_t * lex) {
