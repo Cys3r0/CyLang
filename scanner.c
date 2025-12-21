@@ -11,7 +11,6 @@
 
 
 // TODO:
-// add a take_token_specifc, which takes expects a certain token which is passed to it (or include this in skip_token)
 // Include a python style "pass" keyword
 // add EXPONENT, (LOGICAL) NOT AND OR, (BITWISE) NOT AND OR XOR BITSHIFTS, INCREMENT, DECREMENT tokens
 
@@ -19,7 +18,6 @@ typedef struct {
     enum TokenType token_type;
     int col;
     int row;
-
     char * lexeme;
     int value;
 } neo_token_t;
@@ -117,7 +115,7 @@ tok_ringbuf_t create_ringbuf() {
 }
 
 
-neo_lexer_t * neo_create_lexer(char * source, int source_len) {
+neo_lexer_t * create_lexer(char * source, int source_len) {
     neo_lexer_t * lex = calloc(1, sizeof(neo_lexer_t));
     lex->source = source;
     lex->source_len = source_len;
@@ -127,7 +125,7 @@ neo_lexer_t * neo_create_lexer(char * source, int source_len) {
     return lex;
 }
 
-neo_token_t * neo_create_token(enum TokenType token_type, int row, int col, char * lexeme, int value) {
+neo_token_t * create_token(enum TokenType token_type, int row, int col, char * lexeme, int value) {
     neo_token_t * tok = malloc(sizeof(neo_token_t));
     tok->token_type = token_type;
     tok->row = row;
@@ -139,8 +137,11 @@ neo_token_t * neo_create_token(enum TokenType token_type, int row, int col, char
 }
 
 neo_token_t * scan_next_tok(neo_lexer_t * lex) {
+    // Could just the peak_char, should work
     enum TokenType token_type;
     char * lexeme = NULL;
+    //line should be row, and they are used incorrectly. they should be given at each peaked token or some such
+    //now they point at the end of a token , or???.
     int col;
     int line;
     int end_offset = 0;
@@ -179,27 +180,27 @@ neo_token_t * scan_next_tok(neo_lexer_t * lex) {
         token_type = TOKEN_DIV;
     else if (c == '%')
         token_type = TOKEN_MOD;
-    else if (c == '^' && lex->source[0] == '^') {
+    else if (c == '^' && peak_char(0, lex) == '^') {
         token_type = TOKEN_EXPONENT;
         end_offset = 1;
     }
-    else if (c == '>' && lex->source[0] == '=') {
+    else if (c == '>' && peak_char(0, lex) == '=') {
         token_type =  TOKEN_GEQ; 
         end_offset = 1;
     }
     else if (c == '>')
         token_type = TOKEN_GT;
-    else if (c == '<' && lex->source[0] == '=') {
+    else if (c == '<' && peak_char(0, lex) == '=') {
         token_type =  TOKEN_LEQ; 
         end_offset = 1;
     }
     else if (c == '<')
         token_type = TOKEN_LT;
-    else if (c == '=' && lex->source[0] == '=') {
+    else if (c == '=' && peak_char(0, lex) == '=') {
         token_type = TOKEN_EQ; 
         end_offset = 1;
     }
-    else if (c == '=')
+    else if (c == '=') 
         token_type = TOKEN_ASSIGN;
     // else if (c == '!') 
     //     token_type = (peak_char(s+1) == '=') ? TOKEN_ASSIGN : TOKEN_NEQ; //TOKEN_NOT
@@ -207,16 +208,16 @@ neo_token_t * scan_next_tok(neo_lexer_t * lex) {
     //     token_type = (peak_char(s+1) == '|') ? TOKEN_ASSIGN : TOKEN_NEQ; //TOKEN_BIT_AND
     else if (c == 'w' 
         && peak_char(0, lex) == 'h' 
-        && peak_char(2, lex) == 'i' 
-        && peak_char(3, lex) == 'l' 
-        && peak_char(4, lex) == 'e'
-        && !is_letter(peak_char(5, lex))) {
+        && peak_char(1, lex) == 'i' 
+        && peak_char(2, lex) == 'l' 
+        && peak_char(3, lex) == 'e'
+        && !is_alphanumeric(peak_char(4, lex))) {
             token_type = TOKEN_WHILE;  
             end_offset = 4;
     }
     else if (c == 'i' 
         && peak_char(0, lex) == 'f' 
-        && !is_letter(peak_char(1, lex))) {
+        && !is_alphanumeric(peak_char(1, lex))) {
             token_type = TOKEN_IF;
             end_offset = 1;
     }
@@ -224,7 +225,7 @@ neo_token_t * scan_next_tok(neo_lexer_t * lex) {
         && peak_char(0, lex) == 'l' 
         && peak_char(1, lex) == 's' 
         && peak_char(2, lex) == 'e' 
-        && !is_letter(peak_char(3, lex))) {
+        && !is_alphanumeric(peak_char(3, lex))) {
             token_type = TOKEN_ELSE;
             end_offset = 3;
     }
@@ -234,24 +235,26 @@ neo_token_t * scan_next_tok(neo_lexer_t * lex) {
         && peak_char(2, lex) == 'u'
         && peak_char(3, lex) == 'r'
         && peak_char(4, lex) == 'n' 
-        && !is_letter(peak_char(5, lex))) {
+        && !is_alphanumeric(peak_char(5, lex))) {
             token_type = TOKEN_RETURN;
             end_offset = 5;
     }
     else if (is_letter(c)) {
         token_type = TOKEN_ID;
         int i = 0;
-        while (is_alphanumeric(peak_char(0, lex))) 
+        while (is_alphanumeric(peak_char(i, lex))) 
             i++;
 
         lexeme = malloc(MAX_LEXEME_LENGTH);
         for (size_t j = 0; j < i; j++) 
-            lexeme[j] = lex->source[j];
+            lexeme[j] = peak_char(j, lex);
         lexeme[i] = '\0';
+
+        end_offset = i;
     }
     else if (is_numeric(c)) {
         token_type = TOKEN_NUM;
-        int i = 1;
+        int i = 0;
         while (is_numeric(peak_char(i, lex))) 
             i++;
 
@@ -262,18 +265,19 @@ neo_token_t * scan_next_tok(neo_lexer_t * lex) {
 
         char number[MAX_LEXEME_LENGTH];
         for (size_t j = 0; j < i; j++) 
-            number[j] = lex->source[j];
+            number[j] = peak_char(j, lex);
         number[i] = '\0';
         
         value = atoi(number); 
+        end_offset = i;
     }
     if (c == '\0') 
         token_type = TOKEN_EOF;
 
     // CHECK THORUGH IF THIS OFFSET CALC IS CORRECT
-    lex->source += end_offset;
+    lex->source_i += end_offset;
 
-    return neo_create_token(token_type, lex->row, lex->col, lexeme, value);
+    return create_token(token_type, lex->row, lex->col, lexeme, value);
 }
 
 enum TokenType peak_n_toks(neo_lexer_t * lex, int n) {
@@ -289,11 +293,14 @@ enum TokenType peak_n_toks(neo_lexer_t * lex, int n) {
 }
 
 enum TokenType peak_tok(neo_lexer_t * lex) {
-    if (lex->peaked.length > 0) 
-        return ringbuf_peak(&lex->peaked)->token_type;
+    if (lex->peaked.length > 0) {
+        printf("checked\n");
+        // return ringbuf_peak(&lex->peaked)->token_type;
+    }
     
     neo_token_t * tok = scan_next_tok(lex);
     ringbuf_put(&lex->peaked, tok);
+    // return TOKEN_SEMI;
     return tok->token_type;
 }
 
@@ -349,36 +356,36 @@ const char * REGEX_RULES =
 
 char * token_to_str(enum TokenType token_type) {
     switch (token_type) {
-        case TOKEN_SEMI: return "SEMI";
-        case TOKEN_ASSIGN: return "ASSIGN";
-        case TOKEN_COMMA: return "COMMA";
-        case TOKEN_LPAR: return "LPAR";
-        case TOKEN_RPAR: return "RPAR";
-        case TOKEN_LWING: return "LWING";
-        case TOKEN_RWING: return "RWING";
-        case TOKEN_LBRACKET: return "LBRACKET";
-        case TOKEN_RBRACKET: return "RBRACKET";
-        case TOKEN_ADD: return "ADD";
-        case TOKEN_SUB: return "SUB";
-        case TOKEN_MUL: return "MUL";
-        case TOKEN_DIV: return "DIV";
-        case TOKEN_MOD: return "MOD";
-        case TOKEN_EQ: return "EQ";
-        case TOKEN_NEQ: return "NEQ";
-        case TOKEN_LT: return "LT";
-        case TOKEN_LEQ: return "LEQ";
-        case TOKEN_GT: return "GT";
-        case TOKEN_GEQ: return "GEQ";
-        case TOKEN_IF: return "IF";
-        case TOKEN_ELSE: return "ELSE";
-        case TOKEN_RETURN: return "RETURN";
-        case TOKEN_WHILE: return "WHILE";
-        case TOKEN_ID: return "ID";
-        case TOKEN_NUM: return "NUM";
-        case TOKEN_EXPONENT: return "EXPONENT";
+        case TOKEN_SEMI:       return "SEMI";
+        case TOKEN_ASSIGN:     return "ASSIGN";
+        case TOKEN_COMMA:      return "COMMA";
+        case TOKEN_LPAR:       return "LPAR";
+        case TOKEN_RPAR:       return "RPAR";
+        case TOKEN_LWING:      return "LWING";
+        case TOKEN_RWING:      return "RWING";
+        case TOKEN_LBRACKET:   return "LBRACKET";
+        case TOKEN_RBRACKET:   return "RBRACKET";
+        case TOKEN_ADD:        return "ADD";
+        case TOKEN_SUB:        return "SUB";
+        case TOKEN_MUL:        return "MUL";
+        case TOKEN_DIV:        return "DIV";
+        case TOKEN_MOD:        return "MOD";
+        case TOKEN_EQ:         return "EQ";
+        case TOKEN_NEQ:        return "NEQ";
+        case TOKEN_LT:         return "LT";
+        case TOKEN_LEQ:        return "LEQ";
+        case TOKEN_GT:         return "GT";
+        case TOKEN_GEQ:        return "GEQ";
+        case TOKEN_IF:         return "IF";
+        case TOKEN_ELSE:       return "ELSE";
+        case TOKEN_RETURN:     return "RETURN";
+        case TOKEN_WHILE:      return "WHILE";
+        case TOKEN_ID:         return "ID";
+        case TOKEN_NUM:        return "NUM";
+        case TOKEN_EXPONENT:   return "EXPONENT";
         case TOKEN_WHITESPACE: return "WHITESPACE";
-        case TOKEN_NEWLINE: return "NEWLINE";
-        default: return "NONE";
+        case TOKEN_NEWLINE:    return "NEWLINE";
+        default:               return "NONE";
     }
 }
 
@@ -598,8 +605,28 @@ token_t * take_token(lexer_t * lex) {
     return t;
 }
 
-
 int main() {
+    char * source = "9 if (abs == 10) , A - B print(10000); while (list) {a[]}";
+    // source = "while else if return == ";
+
+    int len = strlen(source);
+    neo_lexer_t * lex = create_lexer(source, len);
+    printf("%s\n", lex->source);
+
+    //TODO: make sure that take token works after peak_tok
+    // I've changed some values right now, i.e in the peak token to not peak directly so please check that.
+    // and try to do peak_tok and then take tok 
+    for (int i = 0; i < 19; i++) {
+        printf("%d:%s ", i, token_to_str(peak_tok(lex)));
+        // printf("%d:%s ", i, token_to_str(take_tok(lex)->token_type));
+    }
+    printf("\n");
+
+}
+
+
+
+int old_main() {
     char * file_text = "9A if (abs == 10) , A - B       print(10000); while (list) {a[]}";
     regex_t regex;
     regmatch_t m[NUMBER_OF_TOKENS+1];
