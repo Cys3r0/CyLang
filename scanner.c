@@ -11,13 +11,8 @@
 
 
 // TODO:
-// impl peak token and take token
-// Move all regex stuff into init_lexer
-// memoize peak_n_tokens
 // add a take_token_specifc, which takes expects a certain token which is passed to it (or include this in skip_token)
-// add a skip_token that doesn't create a token_t object but removes form lex->file_text
 // Include a python style "pass" keyword
-// Create own scanner
 // add EXPONENT, (LOGICAL) NOT AND OR, (BITWISE) NOT AND OR XOR BITSHIFTS, INCREMENT, DECREMENT tokens
 
 typedef struct {
@@ -144,7 +139,6 @@ neo_token_t * neo_create_token(enum TokenType token_type, int row, int col, char
 }
 
 neo_token_t * scan_next_tok(neo_lexer_t * lex) {
-    // Current peaking with source[k] can segfault 
     enum TokenType token_type;
     char * lexeme = NULL;
     int col;
@@ -310,6 +304,14 @@ neo_token_t * take_tok(neo_lexer_t * lex) {
     return scan_next_tok(lex);
 }
 
+void skip_token(neo_lexer_t * lex, enum TokenType skipped) {
+    if (take_tok(lex)->token_type != skipped) {
+        printf("Unexpected token at %d, %d.", lex->row, lex->col);
+        exit(EXIT_FAILURE);
+    }
+}
+
+
 
 const int NUMBER_OF_TOKENS = TOKEN_NEWLINE;
 
@@ -380,17 +382,8 @@ char * token_to_str(enum TokenType token_type) {
     }
 }
 
-typedef struct {
-    char * str;
-    int cap;
-    int len;
-} String;
-
 
 lexer_t * init_lexer(char * file_text, regex_t regex, regmatch_t * m) {
-
-
-
     lexer_t * lex = malloc(sizeof(lexer_t)); 
     lex->file_text = file_text;
     lex->regex = regex;
