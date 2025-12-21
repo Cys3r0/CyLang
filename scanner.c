@@ -5,8 +5,9 @@
 #include "scanner.h"
 #include <regex.h>
 
-#define MAX_VECTOR_LENGTH 20
+
 #define RINGBUF_SIZE 20
+#define MAX_LEXEME_LENGTH 50
 
 
 // TODO:
@@ -19,47 +20,21 @@
 // Create own scanner
 // add EXPONENT, (LOGICAL) NOT AND OR, (BITWISE) NOT AND OR XOR BITSHIFTS, INCREMENT, DECREMENT tokens
 
-// Useless wrapper function right now
-char peak_char(int n, neo_lexer_t * lex) {
-    if (lex->source_i + n <= lex->source_len) 
-        return lex->source[lex->source_i + n]; 
-    return '\0'; // should never match with value
-}
-
-char take_char(char ** source, neo_lexer_t * lex) {
-    char c = lex->source[lex->source_i];
-
-    if (c == '\n') {
-        lex->row++;    
-        lex->col = 1;
-    } else {
-        lex->col++;
-    }
-    lex->source_i++;
-    
-    return c;
-}
-
-int is_numeric(char c) {
-    return '0' <= c <= '9';
-}
-
-int is_letter(char c) {
-    return 'a' <= c <= 'z' || 'A' <= c <= 'Z' ;
-}
-
-int is_alphanumeric(char c) {
-    return 'a' <= c <= 'z' || 'A' <= c <= 'Z' || '0' <= c <= '9';
-}
 typedef struct {
-    enum TokenType type;
+    enum TokenType token_type;
     int col;
     int row;
-    union {
-        char * lexeme;
-        int value;
-    }
+
+    char * lexeme;
+    int value;
 } neo_token_t;
+
+typedef struct {
+    neo_token_t ** data;
+    int length;
+    int write_i;
+    int read_i;
+} tok_ringbuf_t;
 
 typedef struct {
     char * source;
@@ -70,43 +45,69 @@ typedef struct {
     tok_ringbuf_t peaked;
 } neo_lexer_t;
 
-typedef struct {
-    token_t ** data;
-    int length;
-    int write_i;
-    int read_i;
-} tok_ringbuf_t;
 
 
-int ringbuf_put(tok_ringbuf_t * rb, token_t * tok) {
-    assert((rb->write_i + 1) % rb->buf_size != rb->read_i);
+char peak_char(int n, neo_lexer_t * lex) {
+    if (lex->source_i + n <= lex->source_len) 
+        return lex->source[lex->source_i + n]; 
+    return '\0'; // should never match with value    
+}    
 
-    if ((rb->write_i + 1) % rb->buf_size == rb->read_i) {
+char take_char(neo_lexer_t * lex) {
+    char c = lex->source[lex->source_i];
+
+    if (c == '\n') {
+        lex->row++;    
+        lex->col = 1;
+    } else {
+        lex->col++;
+    }    
+    lex->source_i++;
+    
+    return c;
+}    
+
+int is_numeric(char c) {
+    return '0' <= c && c <= '9';
+}    
+
+int is_letter(char c) {
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') ;
+}    
+
+int is_alphanumeric(char c) {
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || ('0' <= c && c <= '9');
+}    
+
+int ringbuf_put(tok_ringbuf_t * rb, neo_token_t * tok) {
+    assert((rb->write_i + 1) % RINGBUF_SIZE != rb->read_i);
+
+    if ((rb->write_i + 1) % RINGBUF_SIZE == rb->read_i) {
         printf("Error: ring buffer full.");
         exit(EXIT_FAILURE);
     }
 
-    rb->write_i = (rb->write_i + 1) % rb->buf_size;
+    rb->write_i = (rb->write_i + 1) % RINGBUF_SIZE;
     rb->length++;
     rb->data[rb->write_i] = tok;
     return 1;
 }
 
-token_t * ringbuf_get(tok_ringbuf_t * rb) {
+neo_token_t * ringbuf_get(tok_ringbuf_t * rb) {
     if (rb->write_i == rb->read_i) 
         return NULL;
 
-    token_t * ret_tok = rb->data[rb->read_i];
-    rb->read_i = (rb->read_i + 1) % rb->buf_size;
+    neo_token_t * ret_tok = rb->data[rb->read_i];
+    rb->read_i = (rb->read_i + 1) % RINGBUF_SIZE;
     rb->length--;
     return ret_tok;
 }
 
-token_t * ringbuf_peak(tok_ringbuf_t * rb) {
+neo_token_t * ringbuf_peak(tok_ringbuf_t * rb) {
     return (rb->length > 0) ? rb->data[rb->read_i] : NULL ;
 }
 
-token_t * ringbuf_get_n(tok_ringbuf_t * rb, int n) {
+neo_token_t * ringbuf_get_n(tok_ringbuf_t * rb, int n) {
     if (n <= rb->length)
         return rb->data[(rb->read_i + n - 1) % RINGBUF_SIZE];
     return NULL;
@@ -114,9 +115,9 @@ token_t * ringbuf_get_n(tok_ringbuf_t * rb, int n) {
 
 tok_ringbuf_t create_ringbuf() {
     tok_ringbuf_t rb;
-    rb->write_i = 0;
-    rb->read_i = 0;
-    rb->data = calloc(RINGBUF_SIZE, sizeof(token_t *));
+    rb.write_i = 0;
+    rb.read_i = 0;
+    rb.data = calloc(RINGBUF_SIZE, sizeof(neo_token_t *));
     return rb;
 }
 
@@ -131,15 +132,14 @@ neo_lexer_t * neo_create_lexer(char * source, int source_len) {
     return lex;
 }
 
-neo_token_t * neo_create_token(enum TokenType token_type, int line, int col, char * lexeme, int value) {
-    token_t * tok = malloc(sizeof(token_t));
+neo_token_t * neo_create_token(enum TokenType token_type, int row, int col, char * lexeme, int value) {
+    neo_token_t * tok = malloc(sizeof(neo_token_t));
     tok->token_type = token_type;
-    tok->line = line;
+    tok->row = row;
     tok->col = col;
-    if (lexeme) 
-        tok->lexeme = lexeme;
-    else 
-        tok->value = value;
+
+    tok->lexeme = lexeme;
+    tok->value = value;
     return tok;
 }
 
@@ -153,10 +153,10 @@ neo_token_t * scan_next_tok(neo_lexer_t * lex) {
     int value = 0;
     enum TokenType tok_type;
     unsigned int valid_char = 0;
-    char c = take_char(s);
+    char c = take_char(lex);
 
     while (c == ' ' || c == '\n') {
-        c = take_char(s);
+        c = take_char(lex);
     }
 
     if (c == ';')
@@ -250,9 +250,9 @@ neo_token_t * scan_next_tok(neo_lexer_t * lex) {
         while (is_alphanumeric(peak_char(0, lex))) 
             i++;
 
-        lexeme = malloc(50);
-        for (size_t j = 0; j < s+i; j++) 
-            lexeme[j] = s[j];
+        lexeme = malloc(MAX_LEXEME_LENGTH);
+        for (size_t j = 0; j < i; j++) 
+            lexeme[j] = lex->source[j];
         lexeme[i] = '\0';
     }
     else if (is_numeric(c)) {
@@ -263,12 +263,12 @@ neo_token_t * scan_next_tok(neo_lexer_t * lex) {
 
         if (is_alphanumeric(peak_char(i, lex))) 
             printf("Incorrect numeral syntax");
-        if (u >= 50)
+        if (i >= MAX_LEXEME_LENGTH)
             printf("Number has too many characters");
 
-        char number[50];
-        for (size_t j = 0; j < s+i; j++) 
-            number[j] = s[j];
+        char number[MAX_LEXEME_LENGTH];
+        for (size_t j = 0; j < i; j++) 
+            number[j] = lex->source[j];
         number[i] = '\0';
         
         value = atoi(number); 
@@ -279,45 +279,33 @@ neo_token_t * scan_next_tok(neo_lexer_t * lex) {
     // CHECK THORUGH IF THIS OFFSET CALC IS CORRECT
     lex->source += end_offset;
 
-    return neo_create_token(
-        token_type,
-        lex->line;
-        lex->col;
-        lexeme,
-        value,
-    )
+    return neo_create_token(token_type, lex->row, lex->col, lexeme, value);
 }
 
-
-enum TokenType peak_nth_tok(neo_lexer_t * lex, int n) {
-    tok_node_t curr = lex.peaked->head;
-    for (size_t i = 1; i < n; i++) 
-        curr = curr->next;
-
-    return curr->tok
-}
-
-enum TokenType peak_tok(neo_lexer_t * lex, int n) {
-    int to_scan = n - lex.peaked.count;
-    if (to_scan > 0) 
-        return peaked_get_nth(lex, to_scan);
+enum TokenType peak_n_toks(neo_lexer_t * lex, int n) {
+    if (lex->peaked.length >= n) 
+        return ringbuf_get_n(&lex->peaked, n)->token_type;
     
-    for (size_t i = 0; i < -; i++)
-    {
-        /* code */
+    neo_token_t * tok = NULL;
+    for (size_t i = 0; i < n - lex->peaked.length ; i++) {
+        tok = scan_next_tok(lex);
+        ringbuf_put(&lex->peaked, tok);
     }
-    
-    
+    return tok->token_type;
 }
-
 
 enum TokenType peak_tok(neo_lexer_t * lex) {
-    if ()
+    if (lex->peaked.length > 0) 
+        return ringbuf_peak(&lex->peaked)->token_type;
+    
+    neo_token_t * tok = scan_next_tok(lex);
+    ringbuf_put(&lex->peaked, tok);
+    return tok->token_type;
 }
 
-enum TokenType take_tok(neo_lexer_t * lex) {
-    if (lex.peaked.count > 0) 
-        return peaked_take(lex);
+neo_token_t * take_tok(neo_lexer_t * lex) {
+    if (lex->peaked.length > 0) 
+        return ringbuf_get(&lex->peaked);
     
     return scan_next_tok(lex);
 }
