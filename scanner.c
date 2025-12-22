@@ -72,7 +72,7 @@ int is_alphanumeric(char c) {
     return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || ('0' <= c && c <= '9');
 }    
 
-int ringbuf_put(tok_ringbuf_t * rb, neo_token_t * tok) {
+void ringbuf_put(tok_ringbuf_t * rb, neo_token_t * tok) {
     assert((rb->write_i + 1) % RINGBUF_SIZE != rb->read_i);
 
     if ((rb->write_i + 1) % RINGBUF_SIZE == rb->read_i) {
@@ -80,10 +80,9 @@ int ringbuf_put(tok_ringbuf_t * rb, neo_token_t * tok) {
         exit(EXIT_FAILURE);
     }
 
-    rb->write_i = (rb->write_i + 1) % RINGBUF_SIZE;
-    rb->length++;
     rb->data[rb->write_i] = tok;
-    return 1;
+    rb->length++;
+    rb->write_i = (rb->write_i + 1) % RINGBUF_SIZE;
 }
 
 neo_token_t * ringbuf_get(tok_ringbuf_t * rb) {
@@ -281,24 +280,34 @@ neo_token_t * scan_next_tok(neo_lexer_t * lex) {
 }
 
 enum TokenType peak_n_toks(neo_lexer_t * lex, int n) {
-    if (lex->peaked.length >= n) 
+    if (n <= 0) {
+        printf("Peak 0 tokens ahead not allowed.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if (lex->peaked.length >= n) {
         return ringbuf_get_n(&lex->peaked, n)->token_type;
+    }
     
     neo_token_t * tok = NULL;
-    for (size_t i = 0; i < n - lex->peaked.length ; i++) {
+    int current_len = lex->peaked.length;
+    for (size_t i = 0; i < n - current_len; i++) {
         tok = scan_next_tok(lex);
+        printf("scanned tok := %s\n", token_to_str(tok->token_type));
         ringbuf_put(&lex->peaked, tok);
     }
     return tok->token_type;
 }
 
 enum TokenType peak_tok(neo_lexer_t * lex) {
+    neo_token_t * tok;
     if (lex->peaked.length > 0) {
         printf("checked\n");
-        // return ringbuf_peak(&lex->peaked)->token_type;
+        if ((tok = ringbuf_peak(&lex->peaked)) != NULL)
+            return ringbuf_peak(&lex->peaked)->token_type;
     }
     
-    neo_token_t * tok = scan_next_tok(lex);
+    tok = scan_next_tok(lex);
     ringbuf_put(&lex->peaked, tok);
     // return TOKEN_SEMI;
     return tok->token_type;
@@ -317,6 +326,30 @@ void skip_token(neo_lexer_t * lex, enum TokenType skipped) {
         exit(EXIT_FAILURE);
     }
 }
+
+
+int main() {
+    char * source = "9 if (abs == 10) , A - B print(10000); while (list) {a[]}";
+    // source = "while else if return == ";
+
+    int len = strlen(source);
+    neo_lexer_t * lex = create_lexer(source, len);
+    printf("%s\n", lex->source);
+
+    //TODO: make sure that take token works after peak_tok
+    // I've changed some values right now, i.e in the peak token to not peak directly so please check that.
+    // and try to do peak_tok and then take tok 
+    // printf("%d:%s ", 1, token_to_str(take_tok(lex)->token_type));
+    for (int i = 0; i < 19; i++) {
+        printf("%d:%s ", i, token_to_str(peak_n_toks(lex, i)));
+        // printf("%d:%s ", i, token_to_str(peak_n_toks(lex, 2)));
+        // printf("%d:%s ", i, token_to_str(peak_n_toks(lex, 3)));
+    }
+    printf("\n");
+
+}
+
+
 
 
 
@@ -604,26 +637,6 @@ token_t * take_token(lexer_t * lex) {
     lex->col += m[0].rm_eo - m[0].rm_so;       // recheck that this works with changes to invalid token, unit tests would be nice here
     return t;
 }
-
-int main() {
-    char * source = "9 if (abs == 10) , A - B print(10000); while (list) {a[]}";
-    // source = "while else if return == ";
-
-    int len = strlen(source);
-    neo_lexer_t * lex = create_lexer(source, len);
-    printf("%s\n", lex->source);
-
-    //TODO: make sure that take token works after peak_tok
-    // I've changed some values right now, i.e in the peak token to not peak directly so please check that.
-    // and try to do peak_tok and then take tok 
-    for (int i = 0; i < 19; i++) {
-        printf("%d:%s ", i, token_to_str(peak_tok(lex)));
-        // printf("%d:%s ", i, token_to_str(take_tok(lex)->token_type));
-    }
-    printf("\n");
-
-}
-
 
 
 int old_main() {
