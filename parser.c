@@ -5,11 +5,12 @@
 
 #define MAX_ARGS 64
 #define MAX_STMTS_IN_BLOCK 256
+#define ARBITRARY_FUNC_DECL_COUNT 256
 
-// add skip_token insteTOKEN_ad of just take_token
+// add the initial program/ function lists.
+// add boolean expressions and the limitations of that.
 // create unit tests.
-// Create program super struct or something with list of func_decls,
-// Start with lexical analysis/correctness checking for AST
+// create program super struct or something with list of func_decls,
 
 // LATER:
 //test parser for the input ()
@@ -445,7 +446,7 @@ stmt_t * parse_stmt(lexer_t * lex) {
         case TOKEN_RETURN:
             stmt = parse_stmt_return(lex);
             break;
-            case TOKEN_ID:
+        case TOKEN_ID:
             switch (peak_n_tokens(2, lex)) { 
                 case TOKEN_LPAR:
                     stmt = parse_stmt_func_call(lex);
@@ -463,6 +464,19 @@ stmt_t * parse_stmt(lexer_t * lex) {
         }    
         
         return stmt;
+}
+
+
+//what should be the structure of this? should there be a parse_func_decl_stmt instead of parse_stmt?
+// program should probably only be a list of func_decl pointers, 
+// but in that case func decl should be able to be null I think.
+
+stmt_t ** parse_program(lexer_t * lex) {
+    stmt_t ** program = calloc(ARBITRARY_FUNC_DECL_COUNT, sizeof(stmt_t*));
+    for (size_t i = 0; i < ARBITRARY_FUNC_DECL_COUNT; i++) {
+        program[i] = parse_stmt_func_decl(lex);
+    }
+    return program;
 }
 
 // int main(int argc, char const *argv[]) {
