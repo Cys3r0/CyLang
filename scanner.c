@@ -10,7 +10,8 @@
 #define MAX_LEXEME_LENGTH 50
 
 
-// TODO:
+// LATER:
+// clean up take_char, scan_next_tok etc.
 
 char peak_char(int n, lexer_t * lex) {
     if (lex->take_i + n <= lex->source_len) 
@@ -384,24 +385,13 @@ char * token_to_str(enum TokenType type) {
 
 int no_main() {
     char * source = "9 if (abs == 10) , A - B print(10000); while (list) {a[]}";
-    // source = "while else if return == ";
-
-    int len = strlen(source);
-    lexer_t * lex = create_lexer(source, len);
+    lexer_t * lex = create_lexer(source, strlen(source));
     printf("%s\n", lex->source);
 
-    //TODO: 
-    // The values printed still aren't correct, or at least the peaked values aren't 
-    // probably the use of multiples scan_next_tokens aren't correct. Something needs to be done 
-    // with the peaked_i value. Store that somehow, and add it onto the take_i
-    // printf("%d:%s ", 1, token_to_str(take_token(lex)->token_type));
     for (int i = 1; i < 20; i++) {
         printf("%d peak: %s\n", i, token_to_str(peak_n_tokens(i, lex)));
-        // printf("%d:%s ", i, token_to_str(peak_n_tokens(lex, 2)));
-        // printf("%d:%s ", i, token_to_str(peak_n_tokens(lex, 3)));
     }
-    for (int i = 1; i < 20; i++)
-    {
+    for (int i = 1; i < 20; i++) {
         printf("%d take: %s\n", i, token_to_str(take_token(lex)->token_type));
     }
     

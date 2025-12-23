@@ -6,7 +6,7 @@
 #define MAX_ARGS 64
 #define MAX_STMTS_IN_BLOCK 256
 
-//TODO:  
+// add skip_token insteTOKEN_ad of just take_token
 // create unit tests.
 // Create program super struct or something with list of func_decls,
 // Start with lexical analysis/correctness checking for AST
@@ -107,7 +107,7 @@ expr_t * parse_expr(lexer_t * lex);
 
 expr_t * parse_expr_func_call(token_t * func_id, lexer_t * lex) {
     int arg_len = 0;
-    take_token(lex); // LPAR
+    skip_token(lex, TOKEN_LPAR);
     token_t * next;
     expr_t ** args = NULL;
     
@@ -166,7 +166,7 @@ expr_t * parse_expr_atom(token_t * next, lexer_t * lex) {
 
 expr_t * parse_expr_paran(lexer_t * lex) {
     expr_t * inner = parse_expr(lex);
-    take_token(lex); //Takes RPAR
+    skip_token(lex, TOKEN_RPAR);
     return inner;
 }
 
@@ -245,12 +245,14 @@ expr_t * parse_expr(lexer_t * lex) {
 
 
 
+
+
 stmt_t * parse_stmt(lexer_t * lex);
 
 stmt_t * parse_stmt_func_call(lexer_t * lex) {
     token_t * next = take_token(lex);
     expr_t * func_call = parse_expr_func_call(next, lex);
-    take_token(lex); //SEMI
+    skip_token(lex, TOKEN_SEMI);
     
     stmt_t * stmt = malloc(sizeof(stmt_t));
     stmt->tag = STMT_FUNC_CALL;
@@ -266,7 +268,7 @@ stmt_t * parse_stmt_id_decl(lexer_t * lex) {
     
     if (next == TOKEN_ASSIGN) {
         value = parse_expr(lex);
-        take_token(lex); //SEMI
+        skip_token(lex, TOKEN_SEMI);
     } else if (next == TOKEN_SEMI) {
         value = NULL;
     }
@@ -284,9 +286,9 @@ stmt_t * parse_stmt_id_decl(lexer_t * lex) {
 
 stmt_t * parse_stmt_assign(lexer_t * lex) {
     token_t * variable = take_token(lex);
-    take_token(lex); // take ASSIGN
+    skip_token(lex, TOKEN_ASSIGN);
     expr_t * value = parse_expr(lex);
-    take_token(lex); // take SEMI
+    skip_token(lex, TOKEN_SEMI);
     
     stmt_assign_t * assign = malloc(sizeof(stmt_assign_t));
     assign->variable = variable;
@@ -301,13 +303,13 @@ stmt_t * parse_stmt_assign(lexer_t * lex) {
 stmt_block_t * parse_stmt_block_inner(lexer_t * lex) {    
     stmt_t ** stmts = malloc(MAX_STMTS_IN_BLOCK * sizeof(stmt_t*));
     
-    take_token(lex); //LWING
+    skip_token(lex, TOKEN_LWING);
     int i = 0;
     while(peak_token(lex) != TOKEN_RWING) {
         stmts[i] = parse_stmt(lex);
         i++;
     }
-    take_token(lex); //RWING
+    skip_token(lex, TOKEN_RWING);
     
     stmt_block_t * block =  malloc(sizeof(stmt_block_t));
     block->stmts = stmts;
@@ -325,10 +327,10 @@ stmt_t * parse_stmt_block(lexer_t * lex) {
 
 
 stmt_t * parse_stmt_while(lexer_t * lex) {
-    take_token(lex); // WHILE
-    take_token(lex); // LPAR
+    skip_token(lex, TOKEN_WHILE);
+    skip_token(lex, TOKEN_LPAR);
     expr_t * cond = parse_expr(lex);
-    take_token(lex); // RPAR
+    skip_token(lex, TOKEN_RPAR);
     
     stmt_block_t * block = parse_stmt_block_inner(lex);
     
@@ -343,18 +345,18 @@ stmt_t * parse_stmt_while(lexer_t * lex) {
 }
 
 stmt_t * parse_stmt_if(lexer_t * lex) {
-    take_token(lex); //IF 
-    take_token(lex); //LPAR
+    skip_token(lex, TOKEN_IF );
+    skip_token(lex, TOKEN_LPAR);
     
     expr_t * cond = parse_expr(lex);
     
-    take_token(lex); //RPAR
+    skip_token(lex, TOKEN_RPAR);
     
     stmt_block_t * then = parse_stmt_block_inner(lex);
     stmt_block_t * or_else = NULL;
     
     if (peak_token(lex) == TOKEN_ELSE) {
-        take_token(lex); // ELSE
+        skip_token(lex, TOKEN_ELSE);
         
         or_else = parse_stmt_block_inner(lex);
         
@@ -373,9 +375,9 @@ stmt_t * parse_stmt_if(lexer_t * lex) {
 }
 
 stmt_t * parse_stmt_return(lexer_t * lex) {
-    take_token(lex); // RETURN
+    skip_token(lex, TOKEN_RETURN);
     expr_t * ret_expr = parse_expr(lex);
-    take_token(lex); // SEMI
+    skip_token(lex, TOKEN_SEMI);
     
     stmt_t * stmt = malloc(sizeof(stmt_t));
     stmt->tag = STMT_RETURN;
@@ -386,7 +388,7 @@ stmt_t * parse_stmt_return(lexer_t * lex) {
 stmt_t * parse_stmt_func_decl(lexer_t * lex) {
     token_t * type = take_token(lex);
     token_t * name = take_token(lex);
-    take_token(lex); // LPAR
+    skip_token(lex, TOKEN_LPAR);
     enum TokenType peak = peak_token(lex);
     stmt_t ** params = NULL;
     stmt_block_t * block;
@@ -404,13 +406,13 @@ stmt_t * parse_stmt_func_decl(lexer_t * lex) {
                 printf("Function call may not exceed MAX_ARGS arguments.");
                 exit(EXIT_FAILURE);
             }
-            take_token(lex); // COMMA
+            skip_token(lex, TOKEN_COMMA);
             params[i] = parse_stmt_id_decl(lex);
             i++;
         }
-        take_token(lex); // RPAR
+        skip_token(lex, TOKEN_RPAR);
     } else {
-        take_token(lex); // RPAR
+        skip_token(lex, TOKEN_RPAR);
     }
     block = parse_stmt_block_inner(lex);
     
