@@ -1,12 +1,7 @@
 #ifndef SCANNER_H
 #define SCANNER_H
 
-
-#include <regex.h>
-
-
 enum TokenType {
-    NONE,
     TOKEN_SEMI, 
     TOKEN_ASSIGN, 
     TOKEN_COMMA,
@@ -27,6 +22,15 @@ enum TokenType {
     TOKEN_LEQ, 
     TOKEN_GT, 
     TOKEN_GEQ, 
+    TOKEN_LOG_NOT,
+    TOKEN_LOG_AND,
+    TOKEN_LOG_OR,
+    TOKEN_BIT_NOT,
+    TOKEN_BIT_AND,
+    TOKEN_BIT_OR,
+    TOKEN_BIT_XOR,
+    TOKEN_DEREF,
+    TOKEN_PASS,
     TOKEN_IF, 
     TOKEN_ELSE, 
     TOKEN_RETURN, 
@@ -37,41 +41,46 @@ enum TokenType {
     TOKEN_WHITESPACE, 
     TOKEN_NEWLINE, 
     TOKEN_EOF,
+    TOKEN_ERROR,
+    TOKEN_NONE,
 };
 
 
 typedef struct {
     enum TokenType token_type;
-    int line;
     int col;
-    
-    char * str; 
+    int row;
+    char * lexeme;
     int value;
 } token_t;
 
+typedef struct {
+    token_t ** data;
+    int length;
+    int write_i;
+    int read_i;
+} tok_ringbuf_t;
 
 typedef struct {
-    char * file_text;
-    regex_t regex;
-    regmatch_t * match;
-    int rule_count;
-    int line;
+    char * source;
+    int source_len;
+    int take_i;
     int col;
+    int row;
+    tok_ringbuf_t peaked;
 } lexer_t;
-
-
-extern const char * REGEX_RULES;
-extern const int NUMBER_OF_TOKENS;
 
 char * token_to_str(enum TokenType token_id);
 
-lexer_t * init_lexer(char * file_text, regex_t regex, regmatch_t * m);
+lexer_t * create_lexer(char * source, int source_len);
 
-token_t * init_token(enum TokenType token_type, int line, int col, char * str, int value);
+token_t * create_token(enum TokenType token_type, int row, int col, char * lexeme, int value);
 
 enum TokenType peak_token(lexer_t * lex);
 
 enum TokenType peak_n_tokens(int lookahead, lexer_t * lex);
+
+void skip_token(lexer_t * lex, enum TokenType skipped);
 
 token_t * take_token(lexer_t * lexer);
 
