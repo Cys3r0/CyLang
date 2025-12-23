@@ -1,7 +1,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include "scanner.h" // error is due to regex.h wsl thing
+#include "scanner.h" 
 #include <stdlib.h>
 #include <stdio.h>
 

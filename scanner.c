@@ -22,12 +22,11 @@ char take_char(lexer_t * lex) {
     char c = lex->source[lex->take_i];
 
     if (c == '\n') {
-        lex->row++;    
+        lex->row++;
         lex->col = 1;
     } else {
         lex->col++;
-    }    
-    lex->take_i++;
+    }
     
     return c;
 }    
@@ -120,13 +119,14 @@ token_t * scan_next_tok(lexer_t * lex) {
     //now they point at the end of a token , or???.
     int col;
     int line;
-    int end_offset = 0;
+    int end_offset = 1;
     int value = 0;
     enum TokenType tok_type;
     unsigned int valid_char = 0;
     char c = take_char(lex);
 
     while (c == ' ' || c == '\n') {
+        lex->take_i++;;
         c = take_char(lex);
     }
 
@@ -156,94 +156,94 @@ token_t * scan_next_tok(lexer_t * lex) {
         token_type = TOKEN_DIV;
     else if (c == '%')
         token_type = TOKEN_MOD;
-    else if (c == '^' && peak_char(0, lex) == '^') {
+    else if (c == '^' && peak_char(1, lex) == '^') {
         token_type = TOKEN_EXPONENT;
-        end_offset = 1;
+        end_offset = 2;
     }
-    else if (c == '>' && peak_char(0, lex) == '=') {
+    else if (c == '>' && peak_char(1, lex) == '=') {
         token_type =  TOKEN_GEQ; 
-        end_offset = 1;
+        end_offset = 2;
     }
     else if (c == '>')
         token_type = TOKEN_GT;
-    else if (c == '<' && peak_char(0, lex) == '=') {
+    else if (c == '<' && peak_char(1, lex) == '=') {
         token_type =  TOKEN_LEQ; 
-        end_offset = 1;
+        end_offset = 2;
     }
     else if (c == '<')
         token_type = TOKEN_LT;
-    else if (c == '=' && peak_char(0, lex) == '=') {
+    else if (c == '=' && peak_char(1, lex) == '=') {
         token_type = TOKEN_EQ; 
-        end_offset = 1;
+        end_offset = 2;
     }
     else if (c == '=') 
         token_type = TOKEN_ASSIGN;
-    else if (c == '!' && peak_char(0, lex) == '=') {
+    else if (c == '!' && peak_char(1, lex) == '=') {
         token_type = TOKEN_NEQ; 
-        end_offset = 1;
+        end_offset = 2;
     }
-    else if (c == '!' && peak_char(0, lex) == '=') {
+    else if (c == '!' && peak_char(1, lex) == '=') {
         token_type = TOKEN_NEQ; 
-        end_offset = 1;
+        end_offset = 2;
     }
     else if (c == '!') 
         token_type = TOKEN_LOG_NOT;
     else if (c == '~') 
         token_type = TOKEN_BIT_NOT;
-    else if (c == '|'  && peak_char(0, lex) == '|') {
+    else if (c == '|'  && peak_char(1, lex) == '|') {
         token_type = TOKEN_LOG_OR; 
-        end_offset = 1;
+        end_offset = 2;
     }
     else if (c == '|') 
         token_type = TOKEN_BIT_OR;
-    else if (c == '&'  && peak_char(0, lex) == '&') {
+    else if (c == '&'  && peak_char(1, lex) == '&') {
         token_type = TOKEN_LOG_AND; 
-        end_offset = 1;
+        end_offset = 2;
     }
     else if (c == '&') 
         token_type = TOKEN_BIT_AND;
     else if (c == '@') 
         token_type = TOKEN_DEREF;
     else if (c == 'p' 
-        && peak_char(0, lex) == 'a' 
-        && peak_char(1, lex) == 's' 
+        && peak_char(1, lex) == 'a' 
         && peak_char(2, lex) == 's' 
-        && !is_alphanumeric(peak_char(3, lex))) {
-            token_type = TOKEN_PASS;  
-            end_offset = 3;
-    }
-    else if (c == 'w' 
-        && peak_char(0, lex) == 'h' 
-        && peak_char(1, lex) == 'i' 
-        && peak_char(2, lex) == 'l' 
-        && peak_char(3, lex) == 'e'
+        && peak_char(3, lex) == 's' 
         && !is_alphanumeric(peak_char(4, lex))) {
-            token_type = TOKEN_WHILE;  
+            token_type = TOKEN_PASS;  
             end_offset = 4;
     }
+    else if (c == 'w' 
+        && peak_char(1, lex) == 'h' 
+        && peak_char(2, lex) == 'i' 
+        && peak_char(3, lex) == 'l' 
+        && peak_char(4, lex) == 'e'
+        && !is_alphanumeric(peak_char(5, lex))) {
+            token_type = TOKEN_WHILE;  
+            end_offset = 5;
+    }
     else if (c == 'i' 
-        && peak_char(0, lex) == 'f' 
+        && peak_char(1, lex) == 'f' 
         && !is_alphanumeric(peak_char(1, lex))) {
             token_type = TOKEN_IF;
-            end_offset = 1;
+            end_offset = 2;
     }
     else if (c == 'e' 
-        && peak_char(0, lex) == 'l' 
-        && peak_char(1, lex) == 's' 
-        && peak_char(2, lex) == 'e' 
-        && !is_alphanumeric(peak_char(3, lex))) {
+        && peak_char(1, lex) == 'l' 
+        && peak_char(2, lex) == 's' 
+        && peak_char(3, lex) == 'e' 
+        && !is_alphanumeric(peak_char(4, lex))) {
             token_type = TOKEN_ELSE;
-            end_offset = 3;
+            end_offset = 4;
     }
     else if (c == 'r' 
-        && peak_char(0, lex) == 'e' 
-        && peak_char(1, lex) == 't' 
-        && peak_char(2, lex) == 'u'
-        && peak_char(3, lex) == 'r'
-        && peak_char(4, lex) == 'n' 
-        && !is_alphanumeric(peak_char(5, lex))) {
+        && peak_char(1, lex) == 'e' 
+        && peak_char(2, lex) == 't' 
+        && peak_char(3, lex) == 'u'
+        && peak_char(4, lex) == 'r'
+        && peak_char(5, lex) == 'n' 
+        && !is_alphanumeric(peak_char(6, lex))) {
             token_type = TOKEN_RETURN;
-            end_offset = 5;
+            end_offset = 6;
     }
     else if (is_letter(c)) {
         token_type = TOKEN_ID;
@@ -382,7 +382,7 @@ char * token_to_str(enum TokenType type) {
     }
 }
 
-int main() {
+int no_main() {
     char * source = "9 if (abs == 10) , A - B print(10000); while (list) {a[]}";
     // source = "while else if return == ";
 
@@ -406,6 +406,7 @@ int main() {
     }
     
     printf("\n");
+    return 0;
 
 }
 

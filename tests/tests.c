@@ -1,5 +1,6 @@
 #include "../scanner.h" // error is due to regex.h wsl thing
 #include "../parser.h" 
+#include <string.h>
 
 
 // todo
@@ -24,7 +25,7 @@ void print_expr_binop(binop_t * binop, int level) {
 
 void print_token_str(token_t * tok, int level) {
     print_level(level);
-    printf("str: %s\n", tok->str); 
+    printf("str: %s\n", tok->lexeme); 
 }
 
 void print_token_value(token_t * tok, int level) {
@@ -198,39 +199,33 @@ void print_stmt(stmt_t * stmt, int level) {
 
 
 int main(int argc, char *argv[]) {
-    regex_t regex;
-    regmatch_t m[NUMBER_OF_TOKENS + 1];
-    regcomp(&regex, REGEX_RULES, REG_EXTENDED);
 
     int name_buf_size = 1<<7;
     int file_buf_size = 1<<11;
-    char file_name[name_buf_size];
-    char file_text[file_buf_size];
+    // char file_name[name_buf_size];
+    // char file_text[file_buf_size];
     
-    while (1) {
-        line = fgets(file_name, name_buf_size, stdin)
-        line[strcspn(line, "\n")] = '\0';
-        line[strcspn(line, "\n")] = '\0';
-        line[strcspn(line, "\n")] = '\0';
+    // while (1) {
+    //     line = fgets(file_name, name_buf_size, stdin)
+    //     line[strcspn(line, "\n")] = '\0';
+    //     line[strcspn(line, "\n")] = '\0';
+    //     line[strcspn(line, "\n")] = '\0';
 
 
 
-        size_t n = fread(file_text, 1, sizeof(file_text)-1, stdin);
-        file_text[n] = '\0';
-    }
+    //     size_t n = fread(file_text, 1, sizeof(file_text)-1, stdin);
+    //     file_text[n] = '\0';
+    // }
     
+    char * source = "{ int i = 11; f(1, 2, 3); }";
     
-    lexer_t * lex = init_lexer(file_text, regex, m);
+    lexer_t * lex = create_lexer(source, strlen(source));
 
-    
-    for (int i = 0; i < 9; i++) 
-        printf("%s ", token_to_str(peak_n_tokens(i + 1, lex)));
-    printf("\n");
     
     // if (!fgets(file_text, sizeof(file_text), stdin))  
     //     return 1;
         
-    printf("%s\n", lex->file_text);
+    printf("%s\n", lex->source);
     
     
     stmt_t * stmt = parse_stmt(lex);
