@@ -5,12 +5,14 @@
 
 #define MAX_ARGS 64
 #define MAX_STMTS_IN_BLOCK 256
-#define ARBITRARY_FUNC_DECL_COUNT 256
+#define VEC_INITIAL_SIZE 256
 
-// add the initial program/ function lists.
+
+// create a vector
+// add the initial program/function lists.
 // add boolean expressions and the limitations of that.
 // create unit tests.
-// create program super struct or something with list of func_decls,
+// create program super struct or something with list of func_decls
 
 // LATER:
 //test parser for the input ()
@@ -21,6 +23,34 @@
 //implement pretty print for exprs
 //test calling functions within functions.
 
+void vec_resize(vector_t * vec) {
+    int new_cap = vec->cap << 1;
+    void ** tmp = realloc(vec->data, new_cap * sizeof(*vec->data));
+    if (!tmp) {
+        printf("ERROR: not enough memory left, buy more RAM please.\n");
+        exit(EXIT_FAILURE);
+    }
+    vec->data = tmp;
+    vec->cap = vec->cap << 1;
+}
+
+void vec_add(void * item, vector_t * vec) {
+    if(vec->len == vec->cap) {
+        vec_resize(vec); }
+    
+    vec->data[vec->len] = item;
+    vec->len++;
+}
+
+vector_t * create_vector() {
+    void * data = calloc(VEC_INITIAL_SIZE, sizeof(void *));
+    vector_t * vec = calloc(1, sizeof(vector_t));
+
+    vec->data = data;
+    vec->cap = VEC_INITIAL_SIZE;
+    vec->len = 0;
+    return vec;
+}
 
 
 int is_binop(enum TokenType token_type) {
@@ -472,10 +502,11 @@ stmt_t * parse_stmt(lexer_t * lex) {
 // but in that case func decl should be able to be null I think.
 
 stmt_t ** parse_program(lexer_t * lex) {
-    stmt_t ** program = calloc(ARBITRARY_FUNC_DECL_COUNT, sizeof(stmt_t*));
-    for (size_t i = 0; i < ARBITRARY_FUNC_DECL_COUNT; i++) {
-        program[i] = parse_stmt_func_decl(lex);
-    }
+    vector_t * program = create_vector();
+    stmt_t * stmt;
+    while ((stmt = parse_stmt_func_decl(lex))) 
+        vec_add(stmt, program);
+    
     return program;
 }
 

@@ -25,6 +25,19 @@ int is_atom(enum ExprType type) ;
 
 int precedence_of(enum TokenType token_type) ;
 
+typedef struct {
+    void ** data;
+    int len;
+    int cap;
+} vector_t;
+
+void vec_resize(vector_t * vec) ;
+
+void vec_add(void * item, vector_t * vec) ;
+
+
+
+
 typedef struct expr expr_t;
 
 typedef struct {
