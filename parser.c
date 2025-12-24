@@ -5,11 +5,10 @@
 
 #define MAX_ARGS 64
 #define MAX_STMTS_IN_BLOCK 256
-#define VEC_INITIAL_SIZE 256
+#define BLOCK_INITIAL_SIZE 64
 
 
-// create a vector
-// add the initial program/function lists.
+
 // add boolean expressions and the limitations of that.
 // create unit tests.
 // create program super struct or something with list of func_decls
@@ -22,35 +21,6 @@
 //create unit tests for scanner/parser
 //implement pretty print for exprs
 //test calling functions within functions.
-
-void vec_resize(vector_t * vec) {
-    int new_cap = vec->cap << 1;
-    void ** tmp = realloc(vec->data, new_cap * sizeof(*vec->data));
-    if (!tmp) {
-        printf("ERROR: not enough memory left, buy more RAM please.\n");
-        exit(EXIT_FAILURE);
-    }
-    vec->data = tmp;
-    vec->cap = vec->cap << 1;
-}
-
-void vec_add(void * item, vector_t * vec) {
-    if(vec->len == vec->cap) {
-        vec_resize(vec); }
-    
-    vec->data[vec->len] = item;
-    vec->len++;
-}
-
-vector_t * create_vector() {
-    void * data = calloc(VEC_INITIAL_SIZE, sizeof(void *));
-    vector_t * vec = calloc(1, sizeof(vector_t));
-
-    vec->data = data;
-    vec->cap = VEC_INITIAL_SIZE;
-    vec->len = 0;
-    return vec;
-}
 
 
 int is_binop(enum TokenType token_type) {
@@ -280,6 +250,36 @@ expr_t * parse_expr(lexer_t * lex) {
 
 stmt_t * parse_stmt(lexer_t * lex);
 
+
+void block_resize(stmt_block_t * vec) {
+    int new_cap = vec->cap << 1;
+    stmt_t ** tmp = realloc(vec->stmts, new_cap * sizeof(*vec->stmts));
+    if (!tmp) {
+        printf("ERROR: not enough memory left, buy more RAM please.\n");
+        exit(EXIT_FAILURE);
+    }
+    vec->stmts = tmp;
+    vec->cap = vec->cap << 1;
+}
+
+void block_add(stmt_t * item, stmt_block_t * block) {
+    block->stmts[block->len] = item;
+    block->len++;
+
+    if(block->len == block->cap) {
+        block_resize(block); }
+}
+
+stmt_block_t * create_block() {
+    void * stmts = calloc(BLOCK_INITIAL_SIZE, sizeof(stmt_t*));
+    stmt_block_t * block = calloc(1, sizeof(stmt_block_t));
+
+    block->stmts = stmts;
+    block->cap = BLOCK_INITIAL_SIZE;
+    return block;
+}
+
+
 stmt_t * parse_stmt_func_call(lexer_t * lex) {
     token_t * next = take_token(lex);
     expr_t * func_call = parse_expr_func_call(next, lex);
@@ -333,18 +333,14 @@ stmt_t * parse_stmt_assign(lexer_t * lex) {
 
 stmt_block_t * parse_stmt_block_inner(lexer_t * lex) {    
     stmt_t ** stmts = malloc(MAX_STMTS_IN_BLOCK * sizeof(stmt_t*));
+    stmt_block_t * block = create_block();
     
     skip_token(lex, TOKEN_LWING);
     int i = 0;
     while(peak_token(lex) != TOKEN_RWING) {
-        stmts[i] = parse_stmt(lex);
-        i++;
+        block_add(parse_stmt(lex), block);
     }
     skip_token(lex, TOKEN_RWING);
-    
-    stmt_block_t * block =  malloc(sizeof(stmt_block_t));
-    block->stmts = stmts;
-    block->stmt_count = i;
     
     return block;
 }
@@ -418,6 +414,10 @@ stmt_t * parse_stmt_return(lexer_t * lex) {
 
 stmt_t * parse_stmt_func_decl(lexer_t * lex) {
     token_t * type = take_token(lex);
+    if (type->token_type == TOKEN_EOF) {
+        return NULL;
+    } 
+
     token_t * name = take_token(lex);
     skip_token(lex, TOKEN_LPAR);
     enum TokenType peak = peak_token(lex);
@@ -490,22 +490,17 @@ stmt_t * parse_stmt(lexer_t * lex) {
                 default: break;
             }
             break;
-            default: break;
-        }    
-        
-        return stmt;
+        default: break; // some kind of goto error or something
+    }    
+    
+    return stmt;
 }
 
-
-//what should be the structure of this? should there be a parse_func_decl_stmt instead of parse_stmt?
-// program should probably only be a list of func_decl pointers, 
-// but in that case func decl should be able to be null I think.
-
-stmt_t ** parse_program(lexer_t * lex) {
-    vector_t * program = create_vector();
+stmt_block_t * parse_program(lexer_t * lex) {
+    stmt_block_t * program = create_block();
     stmt_t * stmt;
     while ((stmt = parse_stmt_func_decl(lex))) 
-        vec_add(stmt, program);
+        block_add(stmt, program);
     
     return program;
 }

@@ -90,8 +90,8 @@ void print_expr(expr_t * expr, int level) {
 void print_stmt(stmt_t * stmt, int level) ;
 
 void print_stmt_block_inner(stmt_block_t * block, int level) {
-    print_level(level); printf("stmt_count: %d\n", block->stmt_count);
-    for (int i = 0; i < block->stmt_count; i++) {
+    print_level(level); printf("len: %d\n", block->len);
+    for (int i = 0; i < block->len; i++) {
         print_stmt(block->stmts[i], level); 
     }
 }

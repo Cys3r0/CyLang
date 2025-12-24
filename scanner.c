@@ -311,7 +311,6 @@ enum TokenType peak_n_tokens(int n, lexer_t * lex) {
 enum TokenType peak_token(lexer_t * lex) {
     token_t * tok;
     if (lex->peaked.length > 0) {
-        printf("checked\n");
         if ((tok = ringbuf_peak(&lex->peaked)) != NULL)
             return ringbuf_peak(&lex->peaked)->token_type;
     }
