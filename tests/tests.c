@@ -1,6 +1,8 @@
 #include "../scanner.h" // error is due to regex.h wsl thing
 #include "../parser.h" 
 #include <string.h>
+#include <unistd.h>
+#include <stdlib.h>
 
 
 // todo
@@ -198,26 +200,28 @@ void print_stmt(stmt_t * stmt, int level) {
 }
 
 
+char * read_file_stdin() {
+    size_t cap = 4096;
+    size_t len = 0;
+    char * buf = calloc(cap, sizeof(char));
+    int n;
+
+    while((n = read(0, buf + len, cap - len)) > 0) {
+        len += n;
+        if (len == cap) {
+            cap *= 2;
+            buf = realloc(buf, cap);
+        }
+    }
+
+    buf = realloc(buf, len + 1);
+    buf[len] = '\0';
+    return buf;
+}
+
+
 int main(int argc, char *argv[]) {
-
-    int name_buf_size = 1<<7;
-    int file_buf_size = 1<<11;
-    // char file_name[name_buf_size];
-    // char file_text[file_buf_size];
-    
-    // while (1) {
-    //     line = fgets(file_name, name_buf_size, stdin)
-    //     line[strcspn(line, "\n")] = '\0';
-    //     line[strcspn(line, "\n")] = '\0';
-    //     line[strcspn(line, "\n")] = '\0';
-
-
-
-    //     size_t n = fread(file_text, 1, sizeof(file_text)-1, stdin);
-    //     file_text[n] = '\0';
-    // }
-    
-    char * source = "{ int i = 11; f(1, 2, 3); }";
+    char * source = read_file_stdin();
     
     lexer_t * lex = create_lexer(source, strlen(source));
 
