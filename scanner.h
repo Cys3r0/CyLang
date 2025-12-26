@@ -1,6 +1,8 @@
 #ifndef SCANNER_H
 #define SCANNER_H
 
+#define MAX_LEXEME_LENGTH 64
+
 enum TokenType {
     TOKEN_SEMI, 
     TOKEN_ASSIGN, 

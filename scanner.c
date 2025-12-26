@@ -7,7 +7,6 @@
 
 
 #define RINGBUF_SIZE 20
-#define MAX_LEXEME_LENGTH 50
 
 
 // LATER:
@@ -16,7 +15,7 @@
 char peak_char(int n, lexer_t * lex) {
     if (lex->take_i + n <= lex->source_len) 
         return lex->source[lex->take_i + n]; 
-    return '\0'; // should never match with value    
+    return '\0'; 
 }    
 
 char take_char(lexer_t * lex) {
