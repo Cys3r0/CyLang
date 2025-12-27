@@ -49,6 +49,15 @@ uint64_t hash_str(const unsigned char *s) {
 
 
 int main() {
+    char * str = calloc(64, sizeof(char));
+    for (size_t i = 0; i < 50; i++) {
+        str[i] = 'a';
+        
+    }
+    str[50] = '\0';
+
+    const unsigned char * ustr = (const unsigned char *) str;    
+    printf("%lu", hash_str(ustr));
     
     return 0;
 }
