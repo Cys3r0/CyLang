@@ -2,7 +2,7 @@
 #include "scanner.h"
 #include <stdint.h>
 
-#define INITIAL_VALUE 250323
+#define HASH_TABLE_INITIAL_CAPACITY 64
 #define W 64
 
 static const uint64_t a[65] = {
@@ -36,6 +36,49 @@ static const uint64_t a[65] = {
     0xe7037ed1a0b428dbULL
 };
 
+typedef struct {
+    enum EntryState state;
+    char * key;
+    void * value;
+} entry_t;
+
+typedef struct {
+    entry_t * values;
+    int len;
+    int cap
+} hash_table_t;
+
+hash_table_t * create_hash_table() {
+    void * values = calloc(HASH_TABLE_INITIAL_CAPACITY, sizeof(void *));
+    hash_table_t * table = calloc(1, sizeof(hash_table_t));
+    table->values = values;
+    table->cap = HASH_TABLE_INITIAL_CAPACITY;
+
+    return table;
+}
+
+void hash_table_resize(hash_table_t * table, int make_bigger) {
+    int new_cap = (make_bigger) ? table->cap >> 1 : table->cap >> 1;
+    void * new_values = calloc(new_cap, sizeof(void *));
+    int new_idx = 0;
+
+    for (size_t i = 0; i < table->cap; i++) {
+        
+        /* code */
+    }
+    
+
+}
+
+void hash_table_add(hash_table_t * table) {
+    for (size_t i = 0; i < table->cap; i++) {
+
+    }
+}
+
+
+
+
 
 uint64_t hash_str(const unsigned char *s) {
     // @test this
@@ -48,7 +91,13 @@ uint64_t hash_str(const unsigned char *s) {
 }
 
 
+
+
+
 int main() {
+    // start implementing hash table now. Fully working, linear open addressing, resizeable, for strings.
+    // maybe a 'hashable' tagged union?
+
     char * str = calloc(64, sizeof(char));
     for (size_t i = 0; i < 50; i++) {
         str[i] = 'a';
