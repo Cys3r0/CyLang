@@ -36,6 +36,8 @@ static const uint64_t a[65] = {
     0xe7037ed1a0b428dbULL
 };
 
+enum EntryState { EMPTY, OCCUPIED, DELETED };
+
 typedef struct {
     enum EntryState state;
     char * key;
@@ -43,39 +45,40 @@ typedef struct {
 } entry_t;
 
 typedef struct {
-    entry_t * values;
+    entry_t * entries;
     int len;
     int cap
 } hash_table_t;
 
+
+
 hash_table_t * create_hash_table() {
-    void * values = calloc(HASH_TABLE_INITIAL_CAPACITY, sizeof(void *));
+    entry_t * entries = calloc(HASH_TABLE_INITIAL_CAPACITY, sizeof(entry_t)); // this should initialize to EMPTY
     hash_table_t * table = calloc(1, sizeof(hash_table_t));
-    table->values = values;
+    table->entries = entries;
     table->cap = HASH_TABLE_INITIAL_CAPACITY;
 
     return table;
 }
 
 void hash_table_resize(hash_table_t * table, int make_bigger) {
-    int new_cap = (make_bigger) ? table->cap >> 1 : table->cap >> 1;
-    void * new_values = calloc(new_cap, sizeof(void *));
+    int new_cap = (make_bigger) ? table->cap << 1 : table->cap >> 1;
+    entry_t * new_entries = calloc(new_cap, sizeof(entry_t));
     int new_idx = 0;
+    entry_t curr_entry;
+    int j;
 
     for (size_t i = 0; i < table->cap; i++) {
-        
-        /* code */
+        if ((curr_entry = table->entries[i]).state == OCCUPIED) {
+            j = hash_str(curr_entry.key) % new_cap;
+            new_entries[j] = curr_entry; // expensive copy, use pointers instead?
+        }
     }
-    
 
+    free(table->entries);
+    table->entries = new_entries;
+    table->cap = new_cap;
 }
-
-void hash_table_add(hash_table_t * table) {
-    for (size_t i = 0; i < table->cap; i++) {
-
-    }
-}
-
 
 
 
@@ -83,14 +86,21 @@ void hash_table_add(hash_table_t * table) {
 uint64_t hash_str(const unsigned char *s) {
     // @test this
     __uint128_t h = (__uint128_t)(a[0]);
-
+    
     for (int i = 0; i < MAX_LEXEME_LENGTH; i++)
-        h += (__uint128_t)(a[i + 1]) * (__uint128_t)(s[i]);
-
+    h += (__uint128_t)(a[i + 1]) * (__uint128_t)(s[i]);
+    
     return (uint64_t)(h >> W);
 }
 
 
+void hash_table_add(hash_table_t * table) {
+    for (size_t i = 0; i < table->cap; i++) {
+
+    }
+
+
+}
 
 
 

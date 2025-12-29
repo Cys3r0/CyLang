@@ -10,6 +10,7 @@
 
 
 // LATER:
+// add a struct/group keyword. Preferably group
 // clean up take_char, scan_next_tok etc.
 
 char peak_char(int n, lexer_t * lex) {
