@@ -52,6 +52,27 @@ typedef struct {
 
 
 
+uint64_t hash_str(const unsigned char *s) {
+    // @test this
+    __uint128_t h = (__uint128_t)(a[0]);
+    
+    for (int i = 0; i < MAX_LEXEME_LENGTH; i++)
+    h += (__uint128_t)(a[i + 1]) * (__uint128_t)(s[i]);
+    
+    return (uint64_t)(h >> W);
+}
+
+
+void hash_table_add(hash_table_t * table) {
+    for (size_t i = 0; i < table->cap; i++) {
+
+    }
+
+
+}
+
+
+
 hash_table_t * create_hash_table() {
     entry_t * entries = calloc(HASH_TABLE_INITIAL_CAPACITY, sizeof(entry_t)); // this should initialize to EMPTY
     hash_table_t * table = calloc(1, sizeof(hash_table_t));
@@ -81,26 +102,51 @@ void hash_table_resize(hash_table_t * table, int make_bigger) {
 }
 
 
-
-
-uint64_t hash_str(const unsigned char *s) {
-    // @test this
-    __uint128_t h = (__uint128_t)(a[0]);
+void hash_table_put(hash_table_t * table, char * key, void * value) {
+    entry_t curr_entry;
+    int j;
+    int dead_idx = -1;
+    int hash_idx;
     
-    for (int i = 0; i < MAX_LEXEME_LENGTH; i++)
-    h += (__uint128_t)(a[i + 1]) * (__uint128_t)(s[i]);
-    
-    return (uint64_t)(h >> W);
-}
+    if (table->len / table->cap > 0.7)
+        { hash_table_resize(table, 1); }
+    else if (table->len / table->cap < 0.3)
+        { hash_table_resize(table, 0); }
 
-
-void hash_table_add(hash_table_t * table) {
     for (size_t i = 0; i < table->cap; i++) {
+        hash_idx = (hash_str(key) + i) % table->cap;
+        curr_entry = table->entries[hash_idx];
 
+        if (curr_entry.state == OCCUPIED) {
+            if (strcmp(curr_entry.key == key) == 0) {
+                curr_entry.value = value;
+                return;
+            }
+            continue;
+        }
+
+        if (curr_entry.state == DELETED && dead_idx == -1) {
+            dead_idx = hash_idx; 
+            continue;
+        }
+
+        if (curr_entry.state == EMPTY) {
+            if (dead_idx != -1)
+                { hash_idx = dead_idx; }
+            table->entries[hash_idx].state = OCCUPIED;
+            table->entries[hash_idx].value = value;
+            return;
+        }
     }
 
+    printf("HASH TABLE FULL");
+    exit(EXIT_FAILURE);
+}
+
+entry_t hash_table_get() {
 
 }
+
 
 
 
