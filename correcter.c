@@ -132,8 +132,11 @@ void hash_table_put(hash_table_t * table, char * key, void * value) {
         }
 
         if (curr_entry.state == EMPTY) {
-            if (dead_idx != -1)
-                { hash_idx = dead_idx; }
+            if (dead_idx != -1) 
+                { hash_idx = dead_idx; } 
+            else 
+                { table->len++; }
+            
             table->entries[hash_idx].state = OCCUPIED;
             table->entries[hash_idx].value = value;
             return;
@@ -166,13 +169,32 @@ void * hash_table_get(hash_table_t * table, char * key) {
     exit(EXIT_FAILURE);   
 }
 
+void * hash_table_del(hash_table_t * table, char * key) {
+    entry_t curr_entry;
+    int hash_idx;
+    
+    for (size_t i = 0; i < table->cap; i++) {
+        hash_idx = (hash_str(key) + i) % table->cap;
+        curr_entry = table->entries[hash_idx];
+
+        if (curr_entry.state == EMPTY) 
+            { return NULL; }
+        if (curr_entry.state == DELETED) 
+            { continue; }
+        if (strcmp(key, curr_entry.key) != 0) 
+            { continue; } 
+        
+        table->entries[hash_idx].state = DELETED;
+        return table->entries[hash_idx].value;
+    }
+    
+    printf("DEL: HASH TABLE FULL");
+    exit(EXIT_FAILURE);   
+}
 
 
 
 int main() {
-    // start implementing hash table now. Fully working, linear open addressing, resizeable, for strings.
-    // maybe a 'hashable' tagged union?
-
     char * str = calloc(64, sizeof(char));
     for (size_t i = 0; i < 50; i++) {
         str[i] = 'a';
