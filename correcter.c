@@ -5,6 +5,7 @@
 #define HASH_TABLE_INITIAL_CAPACITY 64
 #define W 64
 
+// Better way to do this? Generate at compile time?
 static const uint64_t a[65] = {
     0x9e3779b97f4a7c15ULL, 0xbf58476d1ce4e5b9ULL,
     0x94d049bb133111ebULL, 0xd6e8feb86659fd93ULL,
@@ -139,12 +140,30 @@ void hash_table_put(hash_table_t * table, char * key, void * value) {
         }
     }
 
-    printf("HASH TABLE FULL");
+    printf("PUT: HASH TABLE FULL");
     exit(EXIT_FAILURE);
 }
 
-entry_t hash_table_get() {
+void * hash_table_get(hash_table_t * table, char * key) {
+    entry_t curr_entry;
+    int hash_idx;
+    
+    for (size_t i = 0; i < table->cap; i++) {
+        hash_idx = (hash_str(key) + i) % table->cap;
+        curr_entry = table->entries[hash_idx];
 
+        if (curr_entry.state == EMPTY) 
+            { return NULL; }
+        if (curr_entry.state == DELETED) 
+            { continue; }
+        if (strcmp(key, curr_entry.key) != 0) 
+            { continue; } 
+        
+        return curr_entry.value;
+    }
+    
+    printf("GET: HASH TABLE FULL");
+    exit(EXIT_FAILURE);   
 }
 
 
