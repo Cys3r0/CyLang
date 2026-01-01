@@ -1,6 +1,8 @@
 #include "parser.h"
 #include "scanner.h"
 #include <stdint.h>
+#include <string.h>
+
 
 #define HASH_TABLE_INITIAL_CAPACITY 64
 #define W 64
@@ -48,7 +50,7 @@ typedef struct {
 typedef struct {
     entry_t * entries;
     int len;
-    int cap
+    int cap;
 } hash_table_t;
 
 
@@ -62,16 +64,6 @@ uint64_t hash_str(const unsigned char *s) {
     
     return (uint64_t)(h >> W);
 }
-
-
-void hash_table_add(hash_table_t * table) {
-    for (size_t i = 0; i < table->cap; i++) {
-
-    }
-
-
-}
-
 
 
 hash_table_t * create_hash_table() {
@@ -92,7 +84,7 @@ void hash_table_resize(hash_table_t * table, int make_bigger) {
 
     for (size_t i = 0; i < table->cap; i++) {
         if ((curr_entry = table->entries[i]).state == OCCUPIED) {
-            j = hash_str(curr_entry.key) % new_cap;
+            j = hash_str((const unsigned char *) curr_entry.key) % new_cap;
             new_entries[j] = curr_entry; // expensive copy, use pointers instead?
         }
     }
@@ -115,11 +107,11 @@ void hash_table_put(hash_table_t * table, char * key, void * value) {
         { hash_table_resize(table, 0); }
 
     for (size_t i = 0; i < table->cap; i++) {
-        hash_idx = (hash_str(key) + i) % table->cap;
+        hash_idx = (hash_str((const unsigned char *) key) + i) % table->cap;
         curr_entry = table->entries[hash_idx];
 
         if (curr_entry.state == OCCUPIED) {
-            if (strcmp(curr_entry.key == key) == 0) {
+            if (strcmp(curr_entry.key, key) == 0) {
                 curr_entry.value = value;
                 return;
             }
@@ -152,7 +144,7 @@ void * hash_table_get(hash_table_t * table, char * key) {
     int hash_idx;
     
     for (size_t i = 0; i < table->cap; i++) {
-        hash_idx = (hash_str(key) + i) % table->cap;
+        hash_idx = (hash_str((const unsigned char *) key) + i) % table->cap;
         curr_entry = table->entries[hash_idx];
 
         if (curr_entry.state == EMPTY) 
@@ -174,7 +166,7 @@ void * hash_table_del(hash_table_t * table, char * key) {
     int hash_idx;
     
     for (size_t i = 0; i < table->cap; i++) {
-        hash_idx = (hash_str(key) + i) % table->cap;
+        hash_idx = (hash_str((const unsigned char *) key) + i) % table->cap;
         curr_entry = table->entries[hash_idx];
 
         if (curr_entry.state == EMPTY) 
