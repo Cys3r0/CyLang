@@ -9,7 +9,7 @@
 
 //TODO
 //test hash_table 
-//name checking, type checking, param - arguement len checking
+//name checking, type checking, param - arguement len checking, return paths
 //AST traversal, maybe with _Generic (?) 
 //Test list traversal
 
@@ -171,7 +171,7 @@ void * hash_table_del(hash_table_t * table, char * key) {
     entry_t curr_entry;
     int hash_idx;
     
-    else if (table->len / table->cap < 0.3 && table->len > 64)
+    if (table->len / table->cap < 0.3 && table->len > 64)
         { hash_table_resize(table, 0); }
 
     for (size_t i = 0; i < table->cap; i++) {
@@ -194,14 +194,49 @@ void * hash_table_del(hash_table_t * table, char * key) {
 }
 
 
+typedef struct {
+    stmt_func_decl_t ** program;
+    hash_table_t * func_name_table;
+} context_t;
+
+
+typedef struct {
+    context_t * global;
+    stmt_func_decl_t * func;
+    hash_table_t * name_table;
+    hash_table_t * type_table;
+} func_context_t;
+
+
+visit_stmt_id_decl(hash_table_t * table, stmt_id_decl_t * id_decl) {
+    hash_table_put(table, id_decl);
+    id_decl->type
+        
+    
+
+}
+
+
+visit_stmt_assign(stmt_assign_t * assign) {
+    // We're going to assume that the decls have to come first in this language
+    // This can be changed later easily, perhaps check assignments in a function last
+    
+    
+
+}
 
 
 
-
-
-
-
-
+void visit_stmt(stmt_t * stmt) {
+    if (stmt->tag == STMT_IF) ;
+    if (stmt->tag == STMT_ID_DECL) ;
+    if (stmt->tag == STMT_ASSIGN) ;
+    if (stmt->tag == STMT_FUNC_CALL) ;
+    if (stmt->tag == STMT_WHILE) ;
+    if (stmt->tag == STMT_RETURN) ;
+    if (stmt->tag == STMT_FUNC_DECL) ;
+    if (stmt->tag == STMT_BLOCK) ;
+}
 
 
 
