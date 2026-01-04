@@ -64,7 +64,7 @@ typedef struct {
 
 
 uint64_t hash_str(const unsigned char *s) {
-    // @test this
+    // hashing function stolen from wikipedia
     __uint128_t h = (__uint128_t)(a[0]);
     
     for (int i = 0; i < MAX_LEXEME_LENGTH; i++)
@@ -103,7 +103,8 @@ void hash_table_resize(hash_table_t * table, int make_bigger) {
 }
 
 
-void hash_table_put(hash_table_t * table, char * key, void * value) {
+int hash_table_put(hash_table_t * table, char * key, void * value) {
+    // returns 0 if key was already in table
     entry_t curr_entry;
     int j;
     int dead_idx = -1;
@@ -119,7 +120,7 @@ void hash_table_put(hash_table_t * table, char * key, void * value) {
         if (curr_entry.state == OCCUPIED) {
             if (strcmp(curr_entry.key, key) == 0) {
                 curr_entry.value = value;
-                return;
+                return 0;
             }
             continue;
         }
@@ -137,7 +138,7 @@ void hash_table_put(hash_table_t * table, char * key, void * value) {
             
             table->entries[hash_idx].state = OCCUPIED;
             table->entries[hash_idx].value = value;
-            return;
+            return 1;
         }
     }
 
@@ -166,6 +167,28 @@ void * hash_table_get(hash_table_t * table, char * key) {
     printf("GET: HASH TABLE FULL");
     exit(EXIT_FAILURE);   
 }
+
+int hash_table_contains(hash_table_t * table, char * key) {
+    entry_t curr_entry;
+    int hash_idx;
+    
+    for (size_t i = 0; i < table->cap; i++) {
+        hash_idx = (hash_str((const unsigned char *) key) + i) % table->cap;
+        curr_entry = table->entries[hash_idx];
+
+        if (curr_entry.state == EMPTY) 
+            { return 0; }
+        if (curr_entry.state == DELETED) 
+            { continue; }
+        if (strcmp(key, curr_entry.key) != 0) 
+            { continue; } 
+        
+        return 1;
+    }
+    
+    printf("CONTAINS: HASH TABLE FULL");
+    exit(EXIT_FAILURE);   
+} 
 
 void * hash_table_del(hash_table_t * table, char * key) {
     entry_t curr_entry;
@@ -196,25 +219,42 @@ void * hash_table_del(hash_table_t * table, char * key) {
 
 typedef struct {
     stmt_func_decl_t ** program;
-    hash_table_t * func_name_table;
+    hash_table_t * func_names;
 } context_t;
 
 
 typedef struct {
     context_t * global;
     stmt_func_decl_t * func;
-    hash_table_t * name_table;
-    hash_table_t * type_table;
+    hash_table_t * names;
 } func_context_t;
 
-
-visit_stmt_id_decl(hash_table_t * table, stmt_id_decl_t * id_decl) {
-    hash_table_put(table, id_decl);
-    id_decl->type
-        
+void add_name_and_type_in_func(func_context_t * context, char * name, char * type) {
+    // Maybe keep pointer to token to keep col and row for error messages
+    // in id_decls and such instead of raw strings
+    if (hash_table_contains(context->global->func_names, name)) 
+        { println("Name conflict with function.\n"); exit(EXIT_FAILURE); }
     
+    // Maybe create a put_if_none() ??
+    if (hash_table_contains(context->names, name)) 
+        { println("Name conflict within same function.\n"); exit(EXIT_FAILURE); }
 
+    hash_table_put(context->names, name, type); 
 }
+
+void add_name_and_type_in_program(context_t * context, char * name, char * type) {
+    if (hash_table_contains(context->func_names, name)) 
+        { println("Name conflict with function.\n"); exit(EXIT_FAILURE); }
+
+    hash_table_put(context->func_names, name, type); 
+}
+
+visit_stmt_id_decl(func_context_t * context, stmt_id_decl_t * id_decl) {
+    add_name_and_type_in_func(context, id_decl->variable, id_decl->type);
+    // how/when do I handle if the value assigned a correct type? 
+}
+
+
 
 
 visit_stmt_assign(stmt_assign_t * assign) {
