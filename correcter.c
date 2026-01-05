@@ -257,13 +257,32 @@ visit_stmt_id_decl(func_context_t * context, stmt_id_decl_t * id_decl) {
 
 
 
-visit_stmt_assign(stmt_assign_t * assign) {
-    // We're going to assume that the decls have to come first in this language
-    // This can be changed later easily, perhaps check assignments in a function last
+visit_stmt_assign(func_context_t * context, stmt_assign_t * assign) {
     
-    
-
 }
+
+
+// For each function we have a hash_table with key being a variable name and 
+// value being the type of said name. All names require a type. 
+// 
+// We go through the AST, where we find declaration everywhere. At a declaration
+// we add the name to the hash_table, and it's type. 
+//
+// Any assignment to said variable must be of the same type of the variable, so 
+// we must type check the values assigning. How do we do this?
+// - for IDs (id_use (rename maybe?)) we can just check the type since we assume 
+//   non-id assignment has been type checked. 
+// - for non-id values, i.e Numerals for the moment (but floats and such later on)
+//   a set of primitive types like char, i8, u8, f16, etc. are required. 
+// - for binops, a check is needed partially to check whether the given exprs 
+//   are valud for the op (bool + bool, or u8 + i8). Some kind of lookup table is 
+//   needed here. In any case a lookup table has to be declared for handling this.
+// - for unary ops, an additional table is needed  (e.g. is - bool valid?)
+//
+// How does this look? A DFS into the lowest node, taking it's type, and then 
+// validating up from there? Perhaps that could work.
+
+
 
 
 
