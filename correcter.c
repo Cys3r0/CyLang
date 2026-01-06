@@ -277,10 +277,28 @@ visit_stmt_assign(func_context_t * context, stmt_assign_t * assign) {
 // - for binops, a check is needed partially to check whether the given exprs 
 //   are valud for the op (bool + bool, or u8 + i8). Some kind of lookup table is 
 //   needed here. In any case a lookup table has to be declared for handling this.
+//      - should the type of binop be stored with the binop? probably poorer 
+//        if so, no? 
 // - for unary ops, an additional table is needed  (e.g. is - bool valid?)
 //
 // How does this look? A DFS into the lowest node, taking it's type, and then 
 // validating up from there? Perhaps that could work.
+//
+// What am I going to do:
+// 1. Create lookup tables the types of binops, i.e their return type. Another 
+//    table for inputs to the binop.
+// 2. Introduce primitives like char, bool, i64, etc. ,
+// 3. Give the type of numerals here in the correcter file,
+//      a. look at the value given 
+//      b. if it's a numeral, give it a i64 as standard
+//      c. if it's a logical binop, give it bool
+//  
+// START HERE:
+// The right idea is probably: go through the whole AST, find all names and all types,
+// put them in a table. After the whole AST has been searched, do type checking. 
+// And here type checking mean checking whether types of names match assignments,
+// whether inputs to "if" and "while" conditions are boolean, whether inputs to 
+// binops of correct types, etc.  
 
 
 
