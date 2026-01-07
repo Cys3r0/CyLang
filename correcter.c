@@ -299,6 +299,8 @@ visit_stmt_assign(func_context_t * context, stmt_assign_t * assign) {
 // And here type checking mean checking whether types of names match assignments,
 // whether inputs to "if" and "while" conditions are boolean, whether inputs to 
 // binops of correct types, etc.  
+//
+// a get type for all nodes. Or is that too much OOP?
 
 
 
