@@ -254,10 +254,9 @@ visit_stmt_id_decl(func_context_t * context, stmt_id_decl_t * id_decl) {
     // how/when do I handle if the value assigned a correct type? 
 }
 
-
-
-
 visit_stmt_assign(func_context_t * context, stmt_assign_t * assign) {
+    char * var_type = (char *) hash_table_get(context->names, assign->variable);
+    int value = strcmp(var_type, assign->variable);
     
 }
 
