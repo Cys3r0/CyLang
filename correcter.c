@@ -257,7 +257,7 @@ visit_stmt_id_decl(func_context_t * context, stmt_id_decl_t * id_decl) {
 visit_stmt_assign(func_context_t * context, stmt_assign_t * assign) {
     char * var_type = (char *) hash_table_get(context->names, assign->variable);
     int value = strcmp(var_type, assign->variable);
-    
+
 }
 
 
@@ -306,16 +306,32 @@ visit_stmt_assign(func_context_t * context, stmt_assign_t * assign) {
 
 
 void visit_stmt(stmt_t * stmt) {
-    if (stmt->tag == STMT_IF) ;
-    if (stmt->tag == STMT_ID_DECL) ;
-    if (stmt->tag == STMT_ASSIGN) ;
-    if (stmt->tag == STMT_FUNC_CALL) ;
-    if (stmt->tag == STMT_WHILE) ;
-    if (stmt->tag == STMT_RETURN) ;
-    if (stmt->tag == STMT_FUNC_DECL) ;
-    if (stmt->tag == STMT_BLOCK) ;
+    if (stmt->tag == STMT_IF) {
+        visit_stmt_if();
+    }
+    if (stmt->tag == STMT_ID_DECL) {
+        visit_stmt_id_decl();
+    }
+    if (stmt->tag == STMT_ASSIGN) {
+        visit_stmt_assign();
+    }
+    if (stmt->tag == STMT_FUNC_CALL) {
+        visit_stmt_func_call();
+    }
+    if (stmt->tag == STMT_WHILE) {
+        visit_stmt_while();
+    }
+    if (stmt->tag == STMT_RETURN) {
+        visit_stmt_return();
+    }
+    if (stmt->tag == STMT_BLOCK) {
+        visit_stmt_block();
+    }
 }
-
+// this should only be for program
+// if (stmt->tag == STMT_FUNC_DECL) {
+//     visit_stmt_func_decl()
+// }
 
 
 
