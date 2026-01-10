@@ -306,6 +306,7 @@ visit_stmt_assign(func_context_t * context, stmt_assign_t * assign) {
 
 
 void visit_stmt(stmt_t * stmt) {
+    // these need to be implemented
     if (stmt->tag == STMT_IF) {
         visit_stmt_if();
     }
