@@ -254,11 +254,33 @@ visit_stmt_id_decl(func_context_t * context, stmt_id_decl_t * id_decl) {
     // how/when do I handle if the value assigned a correct type? 
 }
 
-visit_stmt_assign(func_context_t * context, stmt_assign_t * assign) {
-    char * var_type = (char *) hash_table_get(context->names, assign->variable);
+void visit_stmt_assign(func_context_t * context, stmt_assign_t * assign) {
+    char * var_type = (char *) hash_table_get(context->names, assign->variable->lexeme);
     int value = strcmp(var_type, assign->variable);
-
 }
+
+
+void visit_stmt_id_decl(func_context_t * context, stmt_while_t * while_stmt) {
+    // type check condition against bool
+
+    visit_block_stmt(while_stmt->block);
+}
+
+void visit_stmt_block(func_context_t * context, stmt_block_t * block) {
+    for (size_t i = 0; i < block->len; i++) {
+        visit_stmt(block->stmts[i]);
+    }
+}
+
+void visit_stmt_return(func_context_t * context, expr_t * ret_expr) {
+    // type check against the     
+}
+
+
+
+
+
+
 
 
 // For each function we have a hash_table with key being a variable name and 
