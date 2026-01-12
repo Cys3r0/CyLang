@@ -112,6 +112,12 @@ token_t * create_token(enum TokenType token_type, int row, int col, char * lexem
     return tok;
 }
 
+void destroy_token(token_t * tok) {
+    if (tok->lexeme) 
+        { free(tok->lexeme); }
+    free(tok);
+}
+
 token_t * scan_next_tok(lexer_t * lex) {
     // Could just the peak_char, should work
     enum TokenType token_type;
@@ -329,11 +335,15 @@ token_t * take_token(lexer_t * lex) {
 }
 
 void skip_token(lexer_t * lex, enum TokenType skipped) {
-    if (take_token(lex)->token_type != skipped) {
+    // can optimize to not create token to begin with.
+    token_t * tok = take_token(lex); 
+    if (tok != skipped) {
         printf("Unexpected token at %d, %d.", lex->row, lex->col);
         exit(EXIT_FAILURE);
-    }
+    }   
+    destroy_token(tok); // 
 }
+
 
 
 char * token_to_str(enum TokenType type) {
@@ -396,6 +406,5 @@ int no_main() {
     
     printf("\n");
     return 0;
-
 }
 

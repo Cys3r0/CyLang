@@ -273,9 +273,141 @@ void visit_stmt_block(func_context_t * context, stmt_block_t * block) {
 }
 
 void visit_stmt_return(func_context_t * context, expr_t * ret_expr) {
-    // type check against the     
+    // type check against the
+} 
+
+void typecheck(char * expected) {
+    // basically a strcmp between expected and actual 
 }
 
+enum Primitives {
+    VOID, I32, BOOL,
+}; 
+
+enum Primitives binop_return_type(enum TokenType tok_type) {
+    if (tok_type == TOKEN_LOG_AND) return BOOL;
+    if (tok_type == TOKEN_LOG_OR)  return BOOL;
+    if (tok_type == TOKEN_LOG_NOT) return BOOL;
+
+    if (tok_type == TOKEN_LEQ) return BOOL;
+    if (tok_type == TOKEN_LT)  return BOOL;
+    if (tok_type == TOKEN_GEQ) return BOOL;
+    if (tok_type == TOKEN_GT)  return BOOL;
+    if (tok_type == TOKEN_EQ)  return BOOL;
+    if (tok_type == TOKEN_NEQ) return BOOL;
+
+    if (tok_type == TOKEN_ADD)      return I32;
+    if (tok_type == TOKEN_SUB)      return I32;
+    if (tok_type == TOKEN_MUL)      return I32;
+    if (tok_type == TOKEN_DIV)      return I32;
+    if (tok_type == TOKEN_EXPONENT) return I32;
+
+    exit(EXIT_FAILURE);
+}
+
+enum Primitives binop_expected_type(enum TokenType tok_type) {
+    if (tok_type == TOKEN_LOG_AND) return BOOL;
+    if (tok_type == TOKEN_LOG_OR)  return BOOL;
+    if (tok_type == TOKEN_LOG_NOT) return BOOL;
+
+    if (tok_type == TOKEN_LEQ) return I32;
+    if (tok_type == TOKEN_LT)  return I32;
+    if (tok_type == TOKEN_GEQ) return I32;
+    if (tok_type == TOKEN_GT)  return I32;
+    if (tok_type == TOKEN_EQ)  return I32;
+    if (tok_type == TOKEN_NEQ) return I32;
+
+    if (tok_type == TOKEN_ADD)      return I32;
+    if (tok_type == TOKEN_SUB)      return I32;
+    if (tok_type == TOKEN_MUL)      return I32;
+    if (tok_type == TOKEN_DIV)      return I32;
+    if (tok_type == TOKEN_EXPONENT) return I32;
+
+    if (tok_type == TOKEN_BIT_AND)     return I32;
+    if (tok_type == TOKEN_BIT_OR)      return I32;
+    if (tok_type == TOKEN_BIT_XOR)     return I32;
+
+    exit(EXIT_FAILURE);
+}
+
+enum Primitives unary_return_type(enum TokenType tok_type) {
+    if (tok_type == TOKEN_SUB) return I32;
+    if (tok_type == TOKEN_LOG_NOT) return BOOL;
+    if (tok_type == TOKEN_BIT_NOT) return I32;
+
+    exit(EXIT_FAILURE);
+}
+
+enum Primitives unary_expected_type(enum TokenType tok_type) {
+    if (tok_type == TOKEN_SUB) return I32;
+    if (tok_type == TOKEN_LOG_NOT) return BOOL;
+    if (tok_type == TOKEN_BIT_NOT) return I32;
+
+    exit(EXIT_FAILURE);
+}
+
+enum Primitives unary_expected_type(enum TokenType tok_type) {
+    if (tok_type == TOKEN_LOG_AND) return BOOL;
+    if (tok_type == TOKEN_LOG_OR)  return BOOL;
+    if (tok_type == TOKEN_LOG_NOT) return BOOL;
+
+    if (tok_type == TOKEN_LEQ) return I32;
+    if (tok_type == TOKEN_LT)  return I32;
+    if (tok_type == TOKEN_GEQ) return I32;
+    if (tok_type == TOKEN_GT)  return I32;
+    if (tok_type == TOKEN_EQ)  return I32;
+    if (tok_type == TOKEN_NEQ) return I32;
+
+    if (tok_type == TOKEN_ADD)      return I32;
+    if (tok_type == TOKEN_SUB)      return I32;
+    if (tok_type == TOKEN_MUL)      return I32;
+    if (tok_type == TOKEN_DIV)      return I32;
+    if (tok_type == TOKEN_EXPONENT) return I32;
+
+    exit(EXIT_FAILURE);
+}
+
+
+void visit_expr_func_call(expr_func_call_t * func_call) { 
+    hash_table_get()
+}
+
+
+// We want to chain some expected types
+char * visit_expr(expr_t * e, enum Primitive expected_type) {
+    // Use binop funcs above for this.
+    //recursion yippie :)
+    switch (e->tag) {
+    case EXPR_BINOP:
+        if (!(binop_return_type(e->binop.op) == expected_type)) 
+            { printf("ERROR: wrong type for binop"); exit(EXIT_FAILURE); }
+        
+        enum Primitive expected = binop_expected_type(e->binop.op);
+        visit_expr(e->binop.left, expected);
+        visit_expr(e->binop.right, expected);
+        break;
+    case EXPR_FUNC_CALL:
+        
+        break;
+    case EXPR_NUMERAL:
+        if (expected_type != I32) 
+            { printf("ERROR: wrong type for numeral"); exit(EXIT_FAILURE); }  
+        break;
+    case EXPR_UNARY:
+        if (!(unary_expected_type(e->unary.op) == expected_type)) 
+            { printf("ERROR: wrong type for unary"); exit(EXIT_FAILURE); }
+
+        visit_expr(e->unary.inner, unary_expected_type(e->unary.op));
+        break;
+    case EXPR_ID:
+        /* code */
+        break;
+        
+    default:
+        break;
+    }
+
+}
 
 
 
@@ -329,27 +461,27 @@ void visit_stmt_return(func_context_t * context, expr_t * ret_expr) {
 
 void visit_stmt(stmt_t * stmt) {
     // these need to be implemented
-    if (stmt->tag == STMT_IF) {
-        visit_stmt_if();
-    }
-    if (stmt->tag == STMT_ID_DECL) {
-        visit_stmt_id_decl();
-    }
-    if (stmt->tag == STMT_ASSIGN) {
-        visit_stmt_assign();
-    }
-    if (stmt->tag == STMT_FUNC_CALL) {
-        visit_stmt_func_call();
-    }
-    if (stmt->tag == STMT_WHILE) {
-        visit_stmt_while();
-    }
-    if (stmt->tag == STMT_RETURN) {
-        visit_stmt_return();
-    }
-    if (stmt->tag == STMT_BLOCK) {
-        visit_stmt_block();
-    }
+    // if (stmt->tag == STMT_IF) {
+    //     visit_stmt_if();
+    // }
+    // if (stmt->tag == STMT_ID_DECL) {
+    //     visit_stmt_id_decl();
+    // }
+    // if (stmt->tag == STMT_ASSIGN) {
+    //     visit_stmt_assign();
+    // }
+    // if (stmt->tag == STMT_FUNC_CALL) {
+    //     visit_stmt_func_call();
+    // }
+    // if (stmt->tag == STMT_WHILE) {
+    //     visit_stmt_while();
+    // }
+    // if (stmt->tag == STMT_RETURN) {
+    //     visit_stmt_return();
+    // }
+    // if (stmt->tag == STMT_BLOCK) {
+    //     visit_stmt_block();
+    // }
 }
 // this should only be for program
 // if (stmt->tag == STMT_FUNC_DECL) {

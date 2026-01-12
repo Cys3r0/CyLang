@@ -17,7 +17,6 @@
 //test parser for the input ()
 //create REPL 
 //Figure out how to propagate error messages
-//use a ¤ as a pointer deref.
 //create unit tests for scanner/parser
 //implement pretty print for exprs
 //test calling functions within functions.
@@ -25,6 +24,7 @@
 
 int is_binop(enum TokenType token_type) {
     //works for now
+    
     int ret = token_type == TOKEN_ADD
             || token_type == TOKEN_MUL
             || token_type == TOKEN_SUB
