@@ -368,8 +368,9 @@ enum Primitives unary_expected_type(enum TokenType tok_type) {
 }
 
 
-void visit_expr_func_call(expr_func_call_t * func_call) { 
-    hash_table_get()
+void visit_expr_func_call(func_context_t * context, expr_func_call_t * func_call) { 
+    // add check that func name is in context hash table 
+    
 }
 
 
