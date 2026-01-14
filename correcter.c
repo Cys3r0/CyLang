@@ -59,7 +59,7 @@ typedef struct {
     entry_t * entries;
     int len;
     int cap;
-} hash_table_t;
+} htable_t;
 
 
 
@@ -74,16 +74,16 @@ uint64_t hash_str(const unsigned char *s) {
 }
 
 
-hash_table_t * create_hash_table() {
+htable_t * create_hash_table() {
     entry_t * entries = calloc(HASH_TABLE_INITIAL_CAPACITY, sizeof(entry_t)); // this should initialize to EMPTY
-    hash_table_t * table = calloc(1, sizeof(hash_table_t));
+    htable_t * table = calloc(1, sizeof(htable_t));
     table->entries = entries;
     table->cap = HASH_TABLE_INITIAL_CAPACITY;
 
     return table;
 }
 
-void hash_table_resize(hash_table_t * table, int make_bigger) {
+void ht_resize(htable_t * table, int make_bigger) {
     int new_cap = (make_bigger) ? table->cap << 1 : table->cap >> 1;
     entry_t * new_entries = calloc(new_cap, sizeof(entry_t));
     int new_idx = 0;
@@ -103,7 +103,7 @@ void hash_table_resize(hash_table_t * table, int make_bigger) {
 }
 
 
-int hash_table_put(hash_table_t * table, char * key, void * value) {
+int ht_put(htable_t * table, char * key, void * value) {
     // returns 0 if key was already in table
     entry_t curr_entry;
     int j;
@@ -111,7 +111,7 @@ int hash_table_put(hash_table_t * table, char * key, void * value) {
     int hash_idx;
     
     if (table->len / table->cap > 0.7)
-        { hash_table_resize(table, 1); }
+        { ht_resize(table, 1); }
 
     for (size_t i = 0; i < table->cap; i++) {
         hash_idx = (hash_str((const unsigned char *) key) + i) % table->cap;
@@ -146,7 +146,7 @@ int hash_table_put(hash_table_t * table, char * key, void * value) {
     exit(EXIT_FAILURE);
 }
 
-void * hash_table_get(hash_table_t * table, char * key) {
+void * ht_get(htable_t * table, char * key) {
     entry_t curr_entry;
     int hash_idx;
     
@@ -168,7 +168,7 @@ void * hash_table_get(hash_table_t * table, char * key) {
     exit(EXIT_FAILURE);   
 }
 
-int hash_table_contains(hash_table_t * table, char * key) {
+int ht_contains(htable_t * table, char * key) {
     entry_t curr_entry;
     int hash_idx;
     
@@ -190,12 +190,12 @@ int hash_table_contains(hash_table_t * table, char * key) {
     exit(EXIT_FAILURE);   
 } 
 
-void * hash_table_del(hash_table_t * table, char * key) {
+void * ht_del(htable_t * table, char * key) {
     entry_t curr_entry;
     int hash_idx;
     
     if (table->len / table->cap < 0.3 && table->len > 64)
-        { hash_table_resize(table, 0); }
+        { ht_resize(table, 0); }
 
     for (size_t i = 0; i < table->cap; i++) {
         hash_idx = (hash_str((const unsigned char *) key) + i) % table->cap;
@@ -219,60 +219,58 @@ void * hash_table_del(hash_table_t * table, char * key) {
 
 typedef struct {
     stmt_func_decl_t ** program;
-    hash_table_t * func_names;
+    int curr_func;
+    htable_t * func_names;
+    htable_t * scope_names;
 } context_t;
 
+// what do I do per function? Type check during tree traversal or same that until the end of the function?
 
-typedef struct {
-    context_t * global;
-    stmt_func_decl_t * func;
-    hash_table_t * names;
-} func_context_t;
 
-void add_name_and_type_in_func(func_context_t * context, char * name, char * type) {
+void add_name_and_type_in_func(context_t * context, char * name, char * type) {
     // Maybe keep pointer to token to keep col and row for error messages
     // in id_decls and such instead of raw strings
-    if (hash_table_contains(context->global->func_names, name)) 
+    if (ht_contains(context->global->func_names, name)) 
         { println("Name conflict with function.\n"); exit(EXIT_FAILURE); }
     
     // Maybe create a put_if_none() ??
-    if (hash_table_contains(context->names, name)) 
+    if (ht_contains(context->names, name)) 
         { println("Name conflict within same function.\n"); exit(EXIT_FAILURE); }
 
-    hash_table_put(context->names, name, type); 
+    ht_put(context->names, name, type); 
 }
 
 void add_name_and_type_in_program(context_t * context, char * name, char * type) {
-    if (hash_table_contains(context->func_names, name)) 
+    if (ht_contains(context->func_names, name)) 
         { println("Name conflict with function.\n"); exit(EXIT_FAILURE); }
 
-    hash_table_put(context->func_names, name, type); 
+    ht_put(context->func_names, name, type); 
 }
 
-visit_stmt_id_decl(func_context_t * context, stmt_id_decl_t * id_decl) {
+visit_stmt_id_decl(context_t * context, stmt_id_decl_t * id_decl) {
     add_name_and_type_in_func(context, id_decl->variable, id_decl->type);
     // how/when do I handle if the value assigned a correct type? 
 }
 
-void visit_stmt_assign(func_context_t * context, stmt_assign_t * assign) {
-    char * var_type = (char *) hash_table_get(context->names, assign->variable->lexeme);
+void visit_stmt_assign(context_t * context, stmt_assign_t * assign) {
+    char * var_type = (char *) ht_get(context->names, assign->variable->lexeme);
     int value = strcmp(var_type, assign->variable);
 }
 
 
-void visit_stmt_id_decl(func_context_t * context, stmt_while_t * while_stmt) {
+void visit_stmt_id_decl(context_t * context, stmt_while_t * while_stmt) {
     // type check condition against bool
 
     visit_block_stmt(while_stmt->block);
 }
 
-void visit_stmt_block(func_context_t * context, stmt_block_t * block) {
+void visit_stmt_block(context_t * context, stmt_block_t * block) {
     for (size_t i = 0; i < block->len; i++) {
         visit_stmt(block->stmts[i]);
     }
 }
 
-void visit_stmt_return(func_context_t * context, expr_t * ret_expr) {
+void visit_stmt_return(context_t * context, expr_t * ret_expr) {
     // type check against the
 } 
 
@@ -280,9 +278,7 @@ void typecheck(char * expected) {
     // basically a strcmp between expected and actual 
 }
 
-enum Primitives {
-    VOID, I32, BOOL,
-}; 
+enum Primitives { VOID, I32, BOOL, }; 
 
 enum Primitives binop_return_type(enum TokenType tok_type) {
     if (tok_type == TOKEN_LOG_AND) return BOOL;
@@ -368,7 +364,7 @@ enum Primitives unary_expected_type(enum TokenType tok_type) {
 }
 
 
-void visit_expr_func_call(func_context_t * context, expr_func_call_t * func_call) { 
+void visit_expr_func_call(context_t * context, expr_func_call_t * func_call) { 
     // add check that func name is in context hash table 
     
 }
@@ -504,13 +500,4 @@ int main() {
     
     return 0;
 }
-
-
-
-
-
-
-
-
-
 
