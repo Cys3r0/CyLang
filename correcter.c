@@ -226,27 +226,6 @@ typedef struct {
 
 // what do I do per function? Type check during tree traversal or same that until the end of the function?
 
-
-void add_name_and_type_in_func(context_t * context, char * name, char * type) {
-    // Maybe keep pointer to token to keep col and row for error messages
-    // in id_decls and such instead of raw strings
-    if (ht_contains(context->global->func_names, name)) 
-        { println("Name conflict with function.\n"); exit(EXIT_FAILURE); }
-    
-    // Maybe create a put_if_none() ??
-    if (ht_contains(context->names, name)) 
-        { println("Name conflict within same function.\n"); exit(EXIT_FAILURE); }
-
-    ht_put(context->names, name, type); 
-}
-
-void add_name_and_type_in_program(context_t * context, char * name, char * type) {
-    if (ht_contains(context->func_names, name)) 
-        { println("Name conflict with function.\n"); exit(EXIT_FAILURE); }
-
-    ht_put(context->func_names, name, type); 
-}
-
 visit_stmt_id_decl(context_t * context, stmt_id_decl_t * id_decl) {
     add_name_and_type_in_func(context, id_decl->variable, id_decl->type);
     // how/when do I handle if the value assigned a correct type? 
@@ -365,6 +344,7 @@ enum Primitives unary_expected_type(enum TokenType tok_type) {
 
 
 void visit_expr_func_call(context_t * context, expr_func_call_t * func_call) { 
+    
     // add check that func name is in context hash table 
     
 }
