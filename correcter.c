@@ -224,16 +224,37 @@ typedef struct {
     htable_t * scope_names;
 } context_t;
 
+enum Primitives { 
+    VOID = 1, // we'll assume for now that variables can't take the shape VOID.
+    I32, 
+    BOOL, 
+}; 
+
 // what do I do per function? Type check during tree traversal or same that until the end of the function?
 
+
 visit_stmt_id_decl(context_t * context, stmt_id_decl_t * id_decl) {
-    add_name_and_type_in_func(context, id_decl->variable, id_decl->type);
-    // how/when do I handle if the value assigned a correct type? 
+    //TODO
 }
 
 void visit_stmt_assign(context_t * context, stmt_assign_t * assign) {
-    char * var_type = (char *) ht_get(context->names, assign->variable->lexeme);
-    int value = strcmp(var_type, assign->variable);
+    // name checking
+    if (ht_contains(context->func_names, assign->variable->lexeme)) { 
+        printf("ERROR: variable name matches function name."); 
+        exit(EXIT_FAILURE); 
+    }
+
+    if (!ht_contains(context->scope_names, assign->variable->lexeme)) { 
+        printf("ERROR: variable name not declared before assignment."); 
+        exit(EXIT_FAILURE); 
+    }
+
+    enum Primitive type = ht_get(context->scope_names, assign->variable->lexeme);
+    if (type != visit_expr(assign->value)) { 
+        printf("ERROR: Assigned type does not match variable type."); 
+        exit(EXIT_FAILURE); 
+    }   
+
 }
 
 
@@ -256,8 +277,6 @@ void visit_stmt_return(context_t * context, expr_t * ret_expr) {
 void typecheck(char * expected) {
     // basically a strcmp between expected and actual 
 }
-
-enum Primitives { VOID, I32, BOOL, }; 
 
 enum Primitives binop_return_type(enum TokenType tok_type) {
     if (tok_type == TOKEN_LOG_AND) return BOOL;
