@@ -232,33 +232,44 @@ enum Primitives {
 
 // what do I do per function? Type check during tree traversal or same that until the end of the function?
 
+int erroring_contains(context_t * context, char * name, char * error_msg) {
+    // this is probably poor style, but whatever
+    if (ht_contains(context->func_names, name)) { 
+        printf("ERROR: %s.", error_msg); 
+        exit(EXIT_FAILURE); 
+    }
+}
 
-visit_stmt_id_decl(context_t * context, stmt_id_decl_t * id_decl) {
-    //TODO
+void visit_stmt_id_decl(context_t * context, stmt_id_decl_t * id_decl) {
+    erroring_contains(context->func_names, id_decl->variable->lexeme,
+        "variable name matches function name");
+    
+    ht_put(context->scope_names, id_decl->variable->lexeme, ) // how do I add a type to the list
+    
+
+
 }
 
 void visit_stmt_assign(context_t * context, stmt_assign_t * assign) {
     // name checking
-    if (ht_contains(context->func_names, assign->variable->lexeme)) { 
-        printf("ERROR: variable name matches function name."); 
-        exit(EXIT_FAILURE); 
-    }
+    erroring_contains(context->func_names, assign->variable->lexeme,
+        "variable name matches function name");
 
-    if (!ht_contains(context->scope_names, assign->variable->lexeme)) { 
-        printf("ERROR: variable name not declared before assignment."); 
-        exit(EXIT_FAILURE); 
-    }
 
+    erroring_contains(context->scope_names, assign->variable->lexeme,
+        "variable name not declared before assignment");
+
+    // type checking
     enum Primitive type = ht_get(context->scope_names, assign->variable->lexeme);
     if (type != visit_expr(assign->value)) { 
         printf("ERROR: Assigned type does not match variable type."); 
         exit(EXIT_FAILURE); 
     }   
-
 }
 
 
-void visit_stmt_id_decl(context_t * context, stmt_while_t * while_stmt) {
+void visit_stmt_while(context_t * context, stmt_while_t * while_stmt) {
+
     // type check condition against bool
 
     visit_block_stmt(while_stmt->block);
