@@ -243,8 +243,16 @@ int erroring_contains(context_t * context, char * name, char * error_msg) {
 void visit_stmt_id_decl(context_t * context, stmt_id_decl_t * id_decl) {
     erroring_contains(context->func_names, id_decl->variable->lexeme,
         "variable name matches function name");
+
+    enum Primitive * type = calloc(1, sizeof(enum Primitive)); // ugly but we'll have to change this later
     
-    ht_put(context->scope_names, id_decl->variable->lexeme, ) // how do I add a type to the list
+    ht_put(context->scope_names, id_decl->variable->lexeme, ); // how do I add a type to the list
+
+    //NEXT: 
+    // add symbol table containing type, nested scope, memory offset on stack(?)
+    // figure out a way to represent types correctly. Have some kind of structs ready for each type. 
+    // find out what is added for these in the semantic analysis phase,
+    
     
 
 
