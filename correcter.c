@@ -256,6 +256,37 @@ typedef struct {
     // offset func decl 
 } type_info_t;
 
+type_info_t * create_type(enum Primitive type, int nesting) {
+    type_info_t * type_info = calloc(1, sizeof(type_info_t));
+    type_info->type = type;
+    type_info->byte_size = 4; // TEMPORARY
+    type_info->nesting = nesting;
+    return type_info;
+}
+
+void visit_stmt_block(symbol_stack_t * sym_stack, stmt_block_t * block) {
+    sym_stack_push(sym_stack);
+    for (size_t i = 0; i < block->len; i++) {
+        visit_stmt(block->stmts[i]);
+    }
+    sym_stack_pop(sym_stack);
+}
+
+void visit_func_decl(symbol_stack_t * sym_stack, stmt_func_decl_t * func_decl) {
+    sym_stack_push(sym_stack);
+    for (size_t i = 0; i < func_decl->param_len; i++) {
+        func_decl->params[i]->stmt_id_decl->variable;
+        ht_put(sym_stack->tables[sym_stack->len-1], func_decl->params[i]->);
+    }
+    
+    
+    for (size_t i = 0; i < func_decl->block->len; i++) {
+        visit_stmt(block->stmts[i]);
+    }
+    sym_stack_pop(sym_stack);
+}
+
+
 
 enum Primitives { 
     VOID = 1, // we'll assume for now that variables can't take the shape VOID.
@@ -314,12 +345,6 @@ void visit_stmt_while(context_t * context, stmt_while_t * while_stmt) {
     // type check condition against bool
 
     visit_block_stmt(while_stmt->block);
-}
-
-void visit_stmt_block(context_t * context, stmt_block_t * block) {
-    for (size_t i = 0; i < block->len; i++) {
-        visit_stmt(block->stmts[i]);
-    }
 }
 
 void visit_stmt_return(context_t * context, expr_t * ret_expr) {
