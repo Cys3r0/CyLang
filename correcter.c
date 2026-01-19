@@ -5,6 +5,7 @@
 
 
 #define HASH_TABLE_INITIAL_CAPACITY 64
+#define TEMP_MAX_SYMBOL_TABLE_SIZE 64
 #define W 64
 
 //TODO
@@ -61,6 +62,11 @@ typedef struct {
     int cap;
 } htable_t;
 
+typedef struct {
+    htable_t ** tables;
+    int len;
+    int cap;
+} symbol_stack_t;
 
 
 uint64_t hash_str(const unsigned char *s) {
@@ -216,13 +222,40 @@ void * ht_del(htable_t * table, char * key) {
     exit(EXIT_FAILURE);   
 }
 
+symbol_stack_t * create_symbol_stack() {
+    symbol_stack_t * sym_stack = calloc(1, sizeof(symbol_stack_t));
+    sym_stack->tables = calloc(TEMP_MAX_SYMBOL_TABLE_SIZE, sizeof(htable_t *));
+    sym_stack->tables[0] = create_hash_table();
+    sym_stack->len = 1;
+    sym_stack->cap = TEMP_MAX_SYMBOL_TABLE_SIZE;
+    return sym_stack;
+}
+
+void sym_stack_push(symbol_stack_t * sym_stack) {
+    if (sym_stack->len+1 == sym_stack->cap) {
+        printf("ERROR: Symbol stack overfull.");
+        exit(EXIT_FAILURE);
+    }
+
+    sym_stack->tables[ sym_stack->len++ ] = create_hash_table();
+}
+
+void sym_stack_pop(symbol_stack_t * sym_stack) {
+    if (sym_stack->len-1 < 0) {
+        printf("ERROR: Symbol stack popped while empty.");
+        exit(EXIT_FAILURE);
+    }
+
+    sym_stack->tables[ sym_stack->len-- ] = NULL;
+}
 
 typedef struct {
-    stmt_func_decl_t ** program;
-    int curr_func;
-    htable_t * func_names;
-    htable_t * scope_names;
-} context_t;
+    enum Primitive type;
+    size_t byte_size;
+    int nesting; // level of nesting
+    // offset func decl 
+} type_info_t;
+
 
 enum Primitives { 
     VOID = 1, // we'll assume for now that variables can't take the shape VOID.
