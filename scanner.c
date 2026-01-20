@@ -133,7 +133,7 @@ token_t * scan_next_tok(lexer_t * lex) {
     char c = take_char(lex);
 
     while (c == ' ' || c == '\n') {
-        lex->take_i++;;
+        lex->take_i++;
         c = take_char(lex);
     }
 
@@ -153,6 +153,14 @@ token_t * scan_next_tok(lexer_t * lex) {
         token_type = TOKEN_LBRACKET;
     else if (c == ']')
         token_type = TOKEN_RBRACKET;
+    else if (c == '@') 
+        token_type = TOKEN_DEREF;
+    else if (c == '-' && peak_char(1, lex) == '>') {
+        token_type =  TOKEN_ADDRESSOF; 
+        end_offset = 2;
+    }
+    else if (c == '-')
+        token_type = TOKEN_SUB;
     else if (c == '+')
         token_type = TOKEN_ADD;
     else if (c == '-')
@@ -209,8 +217,21 @@ token_t * scan_next_tok(lexer_t * lex) {
     }
     else if (c == '&') 
         token_type = TOKEN_BIT_AND;
-    else if (c == '@') 
-        token_type = TOKEN_DEREF;
+    else if (c == 'i' 
+        && peak_char(1, lex) == '3'
+        && peak_char(2, lex) == '2' 
+        && !is_alphanumeric(peak_char(1, lex))) {
+            token_type = TOKEN_I32;
+            end_offset = 3;
+    }
+    else if (c == 'b' 
+        && peak_char(1, lex) == 'o'
+        && peak_char(2, lex) == 'o' 
+        && peak_char(2, lex) == 'l' 
+        && !is_alphanumeric(peak_char(1, lex))) {
+            token_type = TOKEN_BOOL;
+            end_offset = 4;
+    }
     else if (c == 'p' 
         && peak_char(1, lex) == 'a' 
         && peak_char(2, lex) == 's' 
@@ -376,6 +397,8 @@ char * token_to_str(enum TokenType type) {
         case TOKEN_BIT_OR:      return "BIT_OR";
         case TOKEN_BIT_XOR:     return "BIT_XOR";
         case TOKEN_DEREF:       return "DEREF";
+        case TOKEN_I32:         return "I32";
+        case TOKEN_BOOL:        return "BOOL";
         case TOKEN_PASS:        return "PASS";
         case TOKEN_IF:          return "IF";
         case TOKEN_ELSE:        return "ELSE";

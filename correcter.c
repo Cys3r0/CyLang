@@ -275,13 +275,12 @@ void visit_stmt_block(symbol_stack_t * sym_stack, stmt_block_t * block) {
 void visit_func_decl(symbol_stack_t * sym_stack, stmt_func_decl_t * func_decl) {
     sym_stack_push(sym_stack);
     for (size_t i = 0; i < func_decl->param_len; i++) {
-        func_decl->params[i]->stmt_id_decl->variable;
-        ht_put(sym_stack->tables[sym_stack->len-1], func_decl->params[i]->);
+        char * name = func_decl->params[i]->stmt_id_decl->variable;
+        ht_put(sym_stack->tables[sym_stack->len-1], name, );
     }
     
-    
     for (size_t i = 0; i < func_decl->block->len; i++) {
-        visit_stmt(block->stmts[i]);
+        visit_stmt(func_decl->block->stmts[i]);
     }
     sym_stack_pop(sym_stack);
 }

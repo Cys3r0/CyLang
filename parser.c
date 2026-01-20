@@ -1,5 +1,6 @@
 #include "scanner.h" // error is due to regex.h wsl thing
 #include "parser.h" 
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -249,6 +250,39 @@ expr_t * parse_expr(lexer_t * lex) {
 
 
 stmt_t * parse_stmt(lexer_t * lex);
+
+typedef struct {
+    uint8_t ptr; 
+    token_t * type;
+} type_t;
+
+type_t * create_type(uint8_t ptr, token_t * type) {
+    type_t * new_type = calloc(1, sizeof(type_t));
+    new_type->ptr  = ptr;
+    new_type->type = type;
+    return new_type;
+}
+
+int is_primitive(enum TokenType type) {
+    return type == TOKEN_BOOL || TOKEN_I32;
+}
+
+type_t * parse_type(lexer_t * lex) {
+    token_t * tok = take_token(lex); // can be either pointer or type
+    uint8_t ptr = 0;
+
+    if (tok->token_type == TOKEN_ADDRESSOF) {
+        tok = take_token(lex);
+        ptr = 1;
+    }
+    
+    if (!is_primitive(tok->token_type) &&  tok->token_type != TOKEN_ID) {
+        printf("ERROR: incorrect type. \n");
+        exit(EXIT_FAILURE);
+    }
+
+    return create_type(ptr, tok);    
+}
 
 
 void block_resize(stmt_block_t * vec) {
