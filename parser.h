@@ -77,6 +77,10 @@ expr_t * parse_expr(lexer_t * lex) ;
 
 
 
+typedef struct {
+    int ptr; 
+    token_t * type;
+} type_t;
 
 //stmts
 
@@ -106,7 +110,7 @@ typedef struct {
 } stmt_if_t;
 
 typedef struct {
-    token_t * type;
+    type_t * type;
     token_t * variable;
     expr_t * value;
 } stmt_id_decl_t;
@@ -117,7 +121,7 @@ typedef struct {
 } stmt_assign_t;
 
 typedef struct {
-    token_t * type;
+    type_t * type;
     token_t * func_id;
     stmt_t ** params; // id_decls
     int param_len;

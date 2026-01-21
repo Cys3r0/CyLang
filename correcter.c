@@ -250,13 +250,27 @@ void sym_stack_pop(symbol_stack_t * sym_stack) {
 }
 
 typedef struct {
-    enum Primitive type;
+    type_t * type;
     size_t byte_size;
     int nesting; // level of nesting
     // offset func decl 
 } type_info_t;
 
-type_info_t * create_type(enum Primitive type, int nesting) {
+
+
+
+// TODO:
+// add type_info_t to hash table value-pointer.
+// add struct declaration to parser
+
+
+// NOTE:
+// "In a standard C compiler, the lexer performs a lookup for every identifier it encounters
+// to determine its token type. If the identifier is found in the Ordinary Namespace as a 
+// typedef, the lexer returns a TYPE_NAME token; otherwise, it returns an IDENTIFIER token."
+
+
+type_info_t * create_type_info (type_t * type, int nesting) {
     type_info_t * type_info = calloc(1, sizeof(type_info_t));
     type_info->type = type;
     type_info->byte_size = 4; // TEMPORARY
@@ -480,55 +494,6 @@ char * visit_expr(expr_t * e, enum Primitive expected_type) {
     }
 
 }
-
-
-
-
-
-
-
-// For each function we have a hash_table with key being a variable name and 
-// value being the type of said name. All names require a type. 
-// 
-// We go through the AST, where we find declaration everywhere. At a declaration
-// we add the name to the hash_table, and it's type. 
-//
-// Any assignment to said variable must be of the same type of the variable, so 
-// we must type check the values assigning. How do we do this?
-// - for IDs (id_use (rename maybe?)) we can just check the type since we assume 
-//   non-id assignment has been type checked. 
-// - for non-id values, i.e Numerals for the moment (but floats and such later on)
-//   a set of primitive types like char, i8, u8, f16, etc. are required. 
-// - for binops, a check is needed partially to check whether the given exprs 
-//   are valud for the op (bool + bool, or u8 + i8). Some kind of lookup table is 
-//   needed here. In any case a lookup table has to be declared for handling this.
-//      - should the type of binop be stored with the binop? probably poorer 
-//        if so, no? 
-// - for unary ops, an additional table is needed  (e.g. is - bool valid?)
-//
-// How does this look? A DFS into the lowest node, taking it's type, and then 
-// validating up from there? Perhaps that could work.
-//
-// What am I going to do:
-// 1. Create lookup tables the types of binops, i.e their return type. Another 
-//    table for inputs to the binop.
-// 2. Introduce primitives like char, bool, i64, etc. ,
-// 3. Give the type of numerals here in the correcter file,
-//      a. look at the value given 
-//      b. if it's a numeral, give it a i64 as standard
-//      c. if it's a logical binop, give it bool
-//  
-// START HERE:
-// The right idea is probably: go through the whole AST, find all names and all types,
-// put them in a table. After the whole AST has been searched, do type checking. 
-// And here type checking mean checking whether types of names match assignments,
-// whether inputs to "if" and "while" conditions are boolean, whether inputs to 
-// binops of correct types, etc.  
-//
-// a get type for all nodes. Or is that too much OOP?
-
-
-
 
 
 void visit_stmt(stmt_t * stmt) {

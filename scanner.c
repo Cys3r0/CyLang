@@ -358,7 +358,7 @@ token_t * take_token(lexer_t * lex) {
 void skip_token(lexer_t * lex, enum TokenType skipped) {
     // can optimize to not create token to begin with.
     token_t * tok = take_token(lex); 
-    if (tok != skipped) {
+    if (tok->token_type != skipped) {
         printf("Unexpected token at %d, %d.", lex->row, lex->col);
         exit(EXIT_FAILURE);
     }   

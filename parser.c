@@ -1,6 +1,5 @@
 #include "scanner.h" // error is due to regex.h wsl thing
 #include "parser.h" 
-#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -246,17 +245,9 @@ expr_t * parse_expr(lexer_t * lex) {
 }
 
 
-
-
-
 stmt_t * parse_stmt(lexer_t * lex);
 
-typedef struct {
-    uint8_t ptr; 
-    token_t * type;
-} type_t;
-
-type_t * create_type(uint8_t ptr, token_t * type) {
+type_t * create_type(int ptr, token_t * type) {
     type_t * new_type = calloc(1, sizeof(type_t));
     new_type->ptr  = ptr;
     new_type->type = type;
@@ -264,12 +255,12 @@ type_t * create_type(uint8_t ptr, token_t * type) {
 }
 
 int is_primitive(enum TokenType type) {
-    return type == TOKEN_BOOL || TOKEN_I32;
+    return type == TOKEN_BOOL || type == TOKEN_I32;
 }
 
 type_t * parse_type(lexer_t * lex) {
     token_t * tok = take_token(lex); // can be either pointer or type
-    uint8_t ptr = 0;
+    int ptr = 0;
 
     if (tok->token_type == TOKEN_ADDRESSOF) {
         tok = take_token(lex);
@@ -326,7 +317,7 @@ stmt_t * parse_stmt_func_call(lexer_t * lex) {
 }
 
 stmt_t * parse_stmt_id_decl(lexer_t * lex) {
-    token_t * type = take_token(lex);
+    type_t * type = parse_type(lex);
     token_t * variable = take_token(lex);
     enum TokenType next = take_token(lex)->token_type;
     expr_t * value = NULL;
@@ -447,11 +438,8 @@ stmt_t * parse_stmt_return(lexer_t * lex) {
 }
 
 stmt_t * parse_stmt_func_decl(lexer_t * lex) {
-    token_t * type = take_token(lex);
-    if (type->token_type == TOKEN_EOF) {
-        return NULL;
-    } 
-
+    // add check for TOKEN_EOF
+    type_t * type = parse_type(lex);
     token_t * name = take_token(lex);
     skip_token(lex, TOKEN_LPAR);
     enum TokenType peak = peak_token(lex);
