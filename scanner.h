@@ -40,6 +40,7 @@ enum TokenType {
     TOKEN_ELSE, 
     TOKEN_RETURN, 
     TOKEN_WHILE, 
+    TOKEN_STRUCT, 
     TOKEN_ID, 
     TOKEN_NUM, 
     TOKEN_EXPONENT, 

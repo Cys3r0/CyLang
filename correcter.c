@@ -246,7 +246,7 @@ void sym_stack_pop(symbol_stack_t * sym_stack) {
         exit(EXIT_FAILURE);
     }
 
-    sym_stack->tables[ sym_stack->len-- ] = NULL;
+    sym_stack->tables[ --sym_stack->len ] = NULL;
 }
 
 typedef struct {
@@ -262,7 +262,6 @@ typedef struct {
 // TODO:
 // add type_info_t to hash table value-pointer.
 // add struct declaration to parser
-
 
 // NOTE:
 // "In a standard C compiler, the lexer performs a lookup for every identifier it encounters
@@ -297,6 +296,10 @@ void visit_func_decl(symbol_stack_t * sym_stack, stmt_func_decl_t * func_decl) {
         visit_stmt(func_decl->block->stmts[i]);
     }
     sym_stack_pop(sym_stack);
+}
+
+int sym_stack_contains() {
+
 }
 
 

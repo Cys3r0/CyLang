@@ -129,6 +129,12 @@ typedef struct {
 } stmt_func_decl_t;
 
 typedef struct {
+    token_t * name;
+    stmt_id_decl_t ** members;
+    int member_len;
+} struct_decl_t;
+
+typedef struct {
     expr_t * cond;
     stmt_block_t * block;
 } stmt_while_t;

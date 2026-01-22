@@ -4,8 +4,9 @@
 #include <stdio.h>
 
 #define MAX_ARGS 64
-#define MAX_STMTS_IN_BLOCK 256
+#define MAX_STMTS_IN_BLOCK 1024
 #define BLOCK_INITIAL_SIZE 64
+#define MAX_STRUCT_MEMBER_COUNT 256
 
 
 
@@ -42,9 +43,10 @@ int is_right_associative(enum TokenType token_type) {
 
 int is_unary(enum TokenType token_type) {
     //works for now
-    int ret = token_type == TOKEN_SUB
-            || token_type == TOKEN_ADD;
-    return ret;
+    return token_type == TOKEN_SUB
+            || token_type == TOKEN_ADD
+            || token_type == TOKEN_ADDRESSOF
+            || token_type == TOKEN_DEREF;
 }
 
 int is_atom(enum ExprType type) {
@@ -437,6 +439,28 @@ stmt_t * parse_stmt_return(lexer_t * lex) {
     return stmt;
 }
 
+struct_decl_t * parse_struct_decl(lexer_t * lex) {
+    skip_token(lex, TOKEN_STRUCT);
+    token_t * name = take_token(lex);
+    skip_token(lex, TOKEN_LWING);
+    stmt_id_decl_t ** members = calloc(MAX_STRUCT_MEMBER_COUNT, sizeof(stmt_id_decl_t *));
+    int i = 0;
+
+    while (peak_token(lex) != TOKEN_RWING ) {
+        if (i > MAX_STRUCT_MEMBER_COUNT) 
+            { printf("Too many members."); exit(EXIT_FAILURE); }
+        members[i++] = parse_stmt_id_decl(lex)->stmt_id_decl; // holy ugly
+    }
+
+    skip_token(lex, TOKEN_RWING);
+    struct_decl_t * struct_decl = calloc(1, sizeof(struct_decl_t));
+    struct_decl->name = name;
+    struct_decl->members = members;
+    struct_decl->member_len = i;
+    
+    return struct_decl;
+}
+
 stmt_t * parse_stmt_func_decl(lexer_t * lex) {
     // add check for TOKEN_EOF
     type_t * type = parse_type(lex);
@@ -486,6 +510,9 @@ stmt_t * parse_stmt_func_decl(lexer_t * lex) {
 stmt_t * parse_stmt(lexer_t * lex) {
     stmt_t * stmt; 
     switch (peak_token(lex)) {
+        case TOKEN_ADDRESSOF:
+            stmt = parse_stmt_id_decl(lex);
+            break;
         case TOKEN_IF:
             stmt = parse_stmt_if(lex);
             break;

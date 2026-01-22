@@ -273,6 +273,16 @@ token_t * scan_next_tok(lexer_t * lex) {
             token_type = TOKEN_RETURN;
             end_offset = 6;
     }
+    else if (c == 's' 
+        && peak_char(1, lex) == 't' 
+        && peak_char(2, lex) == 'r' 
+        && peak_char(3, lex) == 'u'
+        && peak_char(4, lex) == 'c'
+        && peak_char(5, lex) == 't' 
+        && !is_alphanumeric(peak_char(6, lex))) {
+            token_type = TOKEN_STRUCT;
+            end_offset = 6;
+    }
     else if (is_letter(c)) {
         token_type = TOKEN_ID;
         int i = 0;
