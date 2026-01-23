@@ -63,6 +63,7 @@ typedef struct {
 } htable_t;
 
 typedef struct {
+    htable_t * type_table;
     htable_t ** tables;
     int len;
     int cap;
@@ -261,7 +262,6 @@ typedef struct {
 
 // TODO:
 // add type_info_t to hash table value-pointer.
-// add struct declaration to parser
 
 // NOTE:
 // "In a standard C compiler, the lexer performs a lookup for every identifier it encounters
@@ -298,9 +298,21 @@ void visit_func_decl(symbol_stack_t * sym_stack, stmt_func_decl_t * func_decl) {
     sym_stack_pop(sym_stack);
 }
 
-int sym_stack_contains() {
+int sym_contains_name(symbol_stack_t * sym_stack, char * name) {
+    for (size_t i = sym_stack->len-1; i >= 0; i--) {
+        if (ht_contains(sym_stack->tables[i], name)) {
+            return 1; }}
 
+    return 0;
 }
+
+sym_contains_type(symbol_stack_t * sym_stack, char * type) {
+    return ht_contains(sym_stack->type_table, type);
+}
+
+
+
+
 
 
 
