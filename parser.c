@@ -249,8 +249,8 @@ expr_t * parse_expr(lexer_t * lex) {
 
 stmt_t * parse_stmt(lexer_t * lex);
 
-type_t * create_type(int ptr, token_t * type) {
-    type_t * new_type = calloc(1, sizeof(type_t));
+type_id_t * create_type(int ptr, token_t * type) {
+    type_id_t * new_type = calloc(1, sizeof(type_id_t));
     new_type->ptr  = ptr;
     new_type->type = type;
     return new_type;
@@ -260,7 +260,7 @@ int is_primitive(enum TokenType type) {
     return type == TOKEN_BOOL || type == TOKEN_I32;
 }
 
-type_t * parse_type(lexer_t * lex) {
+type_id_t * parse_type(lexer_t * lex) {
     token_t * tok = take_token(lex); // can be either pointer or type
     int ptr = 0;
 
@@ -319,7 +319,7 @@ stmt_t * parse_stmt_func_call(lexer_t * lex) {
 }
 
 stmt_t * parse_stmt_id_decl(lexer_t * lex) {
-    type_t * type = parse_type(lex);
+    type_id_t * type = parse_type(lex);
     token_t * variable = take_token(lex);
     enum TokenType next = take_token(lex)->token_type;
     expr_t * value = NULL;
@@ -457,13 +457,13 @@ struct_decl_t * parse_struct_decl(lexer_t * lex) {
     struct_decl->name = name;
     struct_decl->members = members;
     struct_decl->member_len = i;
-    
+
     return struct_decl;
 }
 
 stmt_t * parse_stmt_func_decl(lexer_t * lex) {
     // add check for TOKEN_EOF
-    type_t * type = parse_type(lex);
+    type_id_t * type = parse_type(lex);
     token_t * name = take_token(lex);
     skip_token(lex, TOKEN_LPAR);
     enum TokenType peak = peak_token(lex);

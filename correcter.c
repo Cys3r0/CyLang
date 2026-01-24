@@ -224,34 +224,35 @@ void * ht_del(htable_t * table, char * key) {
 }
 
 symbol_stack_t * create_symbol_stack() {
-    symbol_stack_t * sym_stack = calloc(1, sizeof(symbol_stack_t));
-    sym_stack->tables = calloc(TEMP_MAX_SYMBOL_TABLE_SIZE, sizeof(htable_t *));
-    sym_stack->tables[0] = create_hash_table();
-    sym_stack->len = 1;
-    sym_stack->cap = TEMP_MAX_SYMBOL_TABLE_SIZE;
-    return sym_stack;
+    symbol_stack_t * syms = calloc(1, sizeof(symbol_stack_t));
+    syms->tables = calloc(TEMP_MAX_SYMBOL_TABLE_SIZE, sizeof(htable_t *));
+    syms->tables[0] = create_hash_table();
+    syms->len = 1;
+    syms->cap = TEMP_MAX_SYMBOL_TABLE_SIZE;
+    return syms;
 }
 
-void sym_stack_push(symbol_stack_t * sym_stack) {
-    if (sym_stack->len+1 == sym_stack->cap) {
+void sym_stack_push(symbol_stack_t * syms) {
+    if (syms->len+1 == syms->cap) {
         printf("ERROR: Symbol stack overfull.");
         exit(EXIT_FAILURE);
     }
 
-    sym_stack->tables[ sym_stack->len++ ] = create_hash_table();
+    syms->tables[ syms->len++ ] = create_hash_table();
 }
 
-void sym_stack_pop(symbol_stack_t * sym_stack) {
-    if (sym_stack->len-1 < 0) {
+void sym_stack_pop(symbol_stack_t * syms) {
+    if (syms->len-1 < 0) {
         printf("ERROR: Symbol stack popped while empty.");
         exit(EXIT_FAILURE);
     }
 
-    sym_stack->tables[ --sym_stack->len ] = NULL;
+    syms->tables[ --syms->len ] = NULL;
 }
 
+
 typedef struct {
-    type_t * type;
+    type_id_t * type;
     size_t byte_size;
     int nesting; // level of nesting
     // offset func decl 
@@ -269,7 +270,7 @@ typedef struct {
 // typedef, the lexer returns a TYPE_NAME token; otherwise, it returns an IDENTIFIER token."
 
 
-type_info_t * create_type_info (type_t * type, int nesting) {
+type_info_t * create_type_info (type_id_t * type, int nesting) {
     type_info_t * type_info = calloc(1, sizeof(type_info_t));
     type_info->type = type;
     type_info->byte_size = 4; // TEMPORARY
@@ -277,94 +278,67 @@ type_info_t * create_type_info (type_t * type, int nesting) {
     return type_info;
 }
 
-void visit_stmt_block(symbol_stack_t * sym_stack, stmt_block_t * block) {
-    sym_stack_push(sym_stack);
+void visit_stmt_block(symbol_stack_t * syms, stmt_block_t * block) {
+    sym_stack_push(syms);
     for (size_t i = 0; i < block->len; i++) {
-        visit_stmt(block->stmts[i]);
+        visit_stmt(syms, block->stmts[i]);
     }
-    sym_stack_pop(sym_stack);
+    sym_stack_pop(syms);
 }
 
-void visit_func_decl(symbol_stack_t * sym_stack, stmt_func_decl_t * func_decl) {
-    sym_stack_push(sym_stack);
+void visit_func_decl(symbol_stack_t * syms, stmt_func_decl_t * func_decl) {
+    sym_stack_push(syms);
     for (size_t i = 0; i < func_decl->param_len; i++) {
         char * name = func_decl->params[i]->stmt_id_decl->variable;
-        ht_put(sym_stack->tables[sym_stack->len-1], name, );
+        ht_put(syms->tables[syms->len-1], name, func_decl->type);
     }
     
     for (size_t i = 0; i < func_decl->block->len; i++) {
-        visit_stmt(func_decl->block->stmts[i]);
+        visit_stmt(syms, func_decl->block->stmts[i]);
     }
-    sym_stack_pop(sym_stack);
+    sym_stack_pop(syms);
 }
 
-int sym_contains_name(symbol_stack_t * sym_stack, char * name) {
-    for (size_t i = sym_stack->len-1; i >= 0; i--) {
-        if (ht_contains(sym_stack->tables[i], name)) {
+
+// for this to error, maybe pass a token to error at the note.
+int sym_contains_name(symbol_stack_t * syms, char * name) {
+    for (size_t i = syms->len-1; i >= 0; i--) {
+        if (ht_contains(syms->tables[i], name)) {
             return 1; }}
 
-    return 0;
+    printf("ERROR: name not defined."); 
+    exit(EXIT_FAILURE);
 }
 
-sym_contains_type(symbol_stack_t * sym_stack, char * type) {
-    return ht_contains(sym_stack->type_table, type);
+sym_contains_type(symbol_stack_t * syms, type_id_t * type) {
+    int valid = ht_contains(syms->type_table, type) || is_primitive(type->type);
+    if (!valid) 
+        { printf("ERROR: type not defined."); exit(EXIT_FAILURE); }
+    return valid;
 }
 
 
 
+void visit_stmt_id_decl(symbol_stack_t * syms, stmt_id_decl_t * id_decl) {
+    sym_contains_type(syms, id_decl->type);
 
-
-
-
-enum Primitives { 
-    VOID = 1, // we'll assume for now that variables can't take the shape VOID.
-    I32, 
-    BOOL, 
-}; 
-
-// what do I do per function? Type check during tree traversal or same that until the end of the function?
-
-int erroring_contains(context_t * context, char * name, char * error_msg) {
-    // this is probably poor style, but whatever
-    if (ht_contains(context->func_names, name)) { 
-        printf("ERROR: %s.", error_msg); 
-        exit(EXIT_FAILURE); 
-    }
-}
-
-void visit_stmt_id_decl(context_t * context, stmt_id_decl_t * id_decl) {
-    erroring_contains(context->func_names, id_decl->variable->lexeme,
-        "variable name matches function name");
-
-    enum Primitive * type = calloc(1, sizeof(enum Primitive)); // ugly but we'll have to change this later
+    // avoids int i = i; //where 'i' already exists in an outer scope. I think.
+    if (id_decl->value) 
+        { visit_expr(syms , id_decl->value, id_decl->type); }
     
-    ht_put(context->scope_names, id_decl->variable->lexeme, ); // how do I add a type to the list
-
-    //NEXT: 
-    // add symbol table containing type, nested scope, memory offset on stack(?)
-    // figure out a way to represent types correctly. Have some kind of structs ready for each type. 
-    // find out what is added for these in the semantic analysis phase,
-    
-    
-
-
+    sym_contains_name(syms, id_decl->variable);
+    ht_put(syms->tables[syms->len-1], id_decl->variable, id_decl->type);
 }
 
-void visit_stmt_assign(context_t * context, stmt_assign_t * assign) {
-    // name checking
-    erroring_contains(context->func_names, assign->variable->lexeme,
-        "variable name matches function name");
 
 
-    erroring_contains(context->scope_names, assign->variable->lexeme,
-        "variable name not declared before assignment");
+void visit_stmt_assign(symbol_stack_t * syms, stmt_assign_t * assign) {
+    sym_contains_name(syms, assign->variable->lexeme);
 
-    // type checking
-    enum Primitive type = ht_get(context->scope_names, assign->variable->lexeme);
-    if (type != visit_expr(assign->value)) { 
-        printf("ERROR: Assigned type does not match variable type."); 
-        exit(EXIT_FAILURE); 
-    }   
+    type_info_t type_info =  
+
+
+
 }
 
 
@@ -379,93 +353,6 @@ void visit_stmt_return(context_t * context, expr_t * ret_expr) {
     // type check against the
 } 
 
-void typecheck(char * expected) {
-    // basically a strcmp between expected and actual 
-}
-
-enum Primitives binop_return_type(enum TokenType tok_type) {
-    if (tok_type == TOKEN_LOG_AND) return BOOL;
-    if (tok_type == TOKEN_LOG_OR)  return BOOL;
-    if (tok_type == TOKEN_LOG_NOT) return BOOL;
-
-    if (tok_type == TOKEN_LEQ) return BOOL;
-    if (tok_type == TOKEN_LT)  return BOOL;
-    if (tok_type == TOKEN_GEQ) return BOOL;
-    if (tok_type == TOKEN_GT)  return BOOL;
-    if (tok_type == TOKEN_EQ)  return BOOL;
-    if (tok_type == TOKEN_NEQ) return BOOL;
-
-    if (tok_type == TOKEN_ADD)      return I32;
-    if (tok_type == TOKEN_SUB)      return I32;
-    if (tok_type == TOKEN_MUL)      return I32;
-    if (tok_type == TOKEN_DIV)      return I32;
-    if (tok_type == TOKEN_EXPONENT) return I32;
-
-    exit(EXIT_FAILURE);
-}
-
-enum Primitives binop_expected_type(enum TokenType tok_type) {
-    if (tok_type == TOKEN_LOG_AND) return BOOL;
-    if (tok_type == TOKEN_LOG_OR)  return BOOL;
-    if (tok_type == TOKEN_LOG_NOT) return BOOL;
-
-    if (tok_type == TOKEN_LEQ) return I32;
-    if (tok_type == TOKEN_LT)  return I32;
-    if (tok_type == TOKEN_GEQ) return I32;
-    if (tok_type == TOKEN_GT)  return I32;
-    if (tok_type == TOKEN_EQ)  return I32;
-    if (tok_type == TOKEN_NEQ) return I32;
-
-    if (tok_type == TOKEN_ADD)      return I32;
-    if (tok_type == TOKEN_SUB)      return I32;
-    if (tok_type == TOKEN_MUL)      return I32;
-    if (tok_type == TOKEN_DIV)      return I32;
-    if (tok_type == TOKEN_EXPONENT) return I32;
-
-    if (tok_type == TOKEN_BIT_AND)     return I32;
-    if (tok_type == TOKEN_BIT_OR)      return I32;
-    if (tok_type == TOKEN_BIT_XOR)     return I32;
-
-    exit(EXIT_FAILURE);
-}
-
-enum Primitives unary_return_type(enum TokenType tok_type) {
-    if (tok_type == TOKEN_SUB) return I32;
-    if (tok_type == TOKEN_LOG_NOT) return BOOL;
-    if (tok_type == TOKEN_BIT_NOT) return I32;
-
-    exit(EXIT_FAILURE);
-}
-
-enum Primitives unary_expected_type(enum TokenType tok_type) {
-    if (tok_type == TOKEN_SUB) return I32;
-    if (tok_type == TOKEN_LOG_NOT) return BOOL;
-    if (tok_type == TOKEN_BIT_NOT) return I32;
-
-    exit(EXIT_FAILURE);
-}
-
-enum Primitives unary_expected_type(enum TokenType tok_type) {
-    if (tok_type == TOKEN_LOG_AND) return BOOL;
-    if (tok_type == TOKEN_LOG_OR)  return BOOL;
-    if (tok_type == TOKEN_LOG_NOT) return BOOL;
-
-    if (tok_type == TOKEN_LEQ) return I32;
-    if (tok_type == TOKEN_LT)  return I32;
-    if (tok_type == TOKEN_GEQ) return I32;
-    if (tok_type == TOKEN_GT)  return I32;
-    if (tok_type == TOKEN_EQ)  return I32;
-    if (tok_type == TOKEN_NEQ) return I32;
-
-    if (tok_type == TOKEN_ADD)      return I32;
-    if (tok_type == TOKEN_SUB)      return I32;
-    if (tok_type == TOKEN_MUL)      return I32;
-    if (tok_type == TOKEN_DIV)      return I32;
-    if (tok_type == TOKEN_EXPONENT) return I32;
-
-    exit(EXIT_FAILURE);
-}
-
 
 void visit_expr_func_call(context_t * context, expr_func_call_t * func_call) { 
     
@@ -475,65 +362,65 @@ void visit_expr_func_call(context_t * context, expr_func_call_t * func_call) {
 
 
 // We want to chain some expected types
-char * visit_expr(expr_t * e, enum Primitive expected_type) {
-    // Use binop funcs above for this.
-    //recursion yippie :)
-    switch (e->tag) {
-    case EXPR_BINOP:
-        if (!(binop_return_type(e->binop.op) == expected_type)) 
-            { printf("ERROR: wrong type for binop"); exit(EXIT_FAILURE); }
+//This is all wrong
+// char * visit_expr(symbol_stack_t * syms, expr_t * e, ) {
+//     // Use binop funcs above for this.
+//     //recursion yippie :)
+//     switch (e->tag) {
+//     case EXPR_BINOP:
+//         if (!(binop_return_type(e->binop.op) == expected_type)) 
+//             { printf("ERROR: wrong type for binop"); exit(EXIT_FAILURE); }
         
-        enum Primitive expected = binop_expected_type(e->binop.op);
-        visit_expr(e->binop.left, expected);
-        visit_expr(e->binop.right, expected);
-        break;
-    case EXPR_FUNC_CALL:
+//         enum Primitive expected = binop_expected_type(e->binop.op);
+//         visit_expr(e->binop.left, expected);
+//         visit_expr(e->binop.right, expected);
+//         break;
+//     case EXPR_FUNC_CALL:
         
-        break;
-    case EXPR_NUMERAL:
-        if (expected_type != I32) 
-            { printf("ERROR: wrong type for numeral"); exit(EXIT_FAILURE); }  
-        break;
-    case EXPR_UNARY:
-        if (!(unary_expected_type(e->unary.op) == expected_type)) 
-            { printf("ERROR: wrong type for unary"); exit(EXIT_FAILURE); }
+//         break;
+//     case EXPR_NUMERAL:
+//         if (expected_type != I32) 
+//             { printf("ERROR: wrong type for numeral"); exit(EXIT_FAILURE); }  
+//         break;
+//     case EXPR_UNARY:
+//         if (!(unary_expected_type(e->unary.op) == expected_type)) 
+//             { printf("ERROR: wrong type for unary"); exit(EXIT_FAILURE); }
 
-        visit_expr(e->unary.inner, unary_expected_type(e->unary.op));
-        break;
-    case EXPR_ID:
-        /* code */
-        break;
+//         visit_expr(e->unary.inner, unary_expected_type(e->unary.op));
+//         break;
+//     case EXPR_ID:
+//         /* code */
+//         break;
         
-    default:
-        break;
+//     default:
+//         break;
+//     }
+
+// }
+
+
+void visit_stmt(symbol_stack_t * syms, stmt_t * stmt) {
+    if (stmt->tag == STMT_IF) {
+        visit_stmt_if();
     }
-
-}
-
-
-void visit_stmt(stmt_t * stmt) {
-    // these need to be implemented
-    // if (stmt->tag == STMT_IF) {
-    //     visit_stmt_if();
-    // }
-    // if (stmt->tag == STMT_ID_DECL) {
-    //     visit_stmt_id_decl();
-    // }
-    // if (stmt->tag == STMT_ASSIGN) {
-    //     visit_stmt_assign();
-    // }
-    // if (stmt->tag == STMT_FUNC_CALL) {
-    //     visit_stmt_func_call();
-    // }
-    // if (stmt->tag == STMT_WHILE) {
-    //     visit_stmt_while();
-    // }
-    // if (stmt->tag == STMT_RETURN) {
-    //     visit_stmt_return();
-    // }
-    // if (stmt->tag == STMT_BLOCK) {
-    //     visit_stmt_block();
-    // }
+    if (stmt->tag == STMT_ID_DECL) {
+        visit_stmt_id_decl();
+    }
+    if (stmt->tag == STMT_ASSIGN) {
+        visit_stmt_assign();
+    }
+    if (stmt->tag == STMT_FUNC_CALL) {
+        visit_stmt_func_call();
+    }
+    if (stmt->tag == STMT_WHILE) {
+        visit_stmt_while();
+    }
+    if (stmt->tag == STMT_RETURN) {
+        visit_stmt_return();
+    }
+    if (stmt->tag == STMT_BLOCK) {
+        visit_stmt_block();
+    }
 }
 // this should only be for program
 // if (stmt->tag == STMT_FUNC_DECL) {
