@@ -63,8 +63,10 @@ typedef struct {
 } htable_t;
 
 typedef struct {
+    htable_t * func_table;
     htable_t * type_table;
     htable_t ** tables;
+    stmt_func_decl_t * curr_func;
     int len;
     int cap;
 } symbol_stack_t;
@@ -287,6 +289,8 @@ void visit_stmt_block(symbol_stack_t * syms, stmt_block_t * block) {
 }
 
 void visit_func_decl(symbol_stack_t * syms, stmt_func_decl_t * func_decl) {
+    sym_contains_type(syms, func_decl->type);
+    ht_put(syms->func_table, func_decl->func_id->lexeme, )
     sym_stack_push(syms);
     for (size_t i = 0; i < func_decl->param_len; i++) {
         char * name = func_decl->params[i]->stmt_id_decl->variable;
@@ -305,28 +309,37 @@ int sym_contains_name(symbol_stack_t * syms, char * name) {
     for (size_t i = syms->len-1; i >= 0; i--) {
         if (ht_contains(syms->tables[i], name)) {
             return 1; }}
+    
+    return 0;
+}
+
+int sym_contains_type(symbol_stack_t * syms, type_id_t * type) {
+    if (!(ht_contains(syms->type_table, type) || is_primitive(type->type))) 
+        { printf("ERROR: type not defined."); exit(EXIT_FAILURE); }
+    return 1;
+}
+
+type_id_t * sym_get_type(symbol_stack_t * syms, char * name) {
+    type_info_t * t;
+    for (size_t i = syms->len-1; i >= 0; i--) {
+        if (t = ht_get(syms->tables[i], name)) 
+            { return t->type; } }
 
     printf("ERROR: name not defined."); 
     exit(EXIT_FAILURE);
 }
 
-sym_contains_type(symbol_stack_t * syms, type_id_t * type) {
-    int valid = ht_contains(syms->type_table, type) || is_primitive(type->type);
-    if (!valid) 
-        { printf("ERROR: type not defined."); exit(EXIT_FAILURE); }
-    return valid;
-}
-
-
 
 void visit_stmt_id_decl(symbol_stack_t * syms, stmt_id_decl_t * id_decl) {
     sym_contains_type(syms, id_decl->type);
 
-    // avoids int i = i; //where 'i' already exists in an outer scope. I think.
+    // avoids int i = i; where 'i' already exists in an outer scope. I think.
     if (id_decl->value) 
         { visit_expr(syms , id_decl->value, id_decl->type); }
     
-    sym_contains_name(syms, id_decl->variable);
+    if (ht_contains(syms->tables[syms->len - 1], id_decl->variable->lexeme))
+        { ht_put(syms->tables[syms->len-1], id_decl->variable, id_decl->type); }
+
     ht_put(syms->tables[syms->len-1], id_decl->variable, id_decl->type);
 }
 
@@ -334,28 +347,24 @@ void visit_stmt_id_decl(symbol_stack_t * syms, stmt_id_decl_t * id_decl) {
 
 void visit_stmt_assign(symbol_stack_t * syms, stmt_assign_t * assign) {
     sym_contains_name(syms, assign->variable->lexeme);
-
-    type_info_t type_info =  
-
-
-
+    visit_expr(assign->value, sym_get_type(syms, assign->variable->lexeme));
 }
 
 
-void visit_stmt_while(context_t * context, stmt_while_t * while_stmt) {
-
-    // type check condition against bool
+void visit_stmt_while(symbol_stack_t * syms, stmt_while_t * while_stmt) {
+    visit_expr(while_stmt->cond, &(type_id_t){0, TOKEN_BOOL});
 
     visit_block_stmt(while_stmt->block);
 }
 
-void visit_stmt_return(context_t * context, expr_t * ret_expr) {
-    // type check against the
+void visit_stmt_return(symbol_stack_t * syms, expr_t * ret_expr) { 
+    visit_expr(ret_expr, syms->curr_func->type); 
 } 
 
 
-void visit_expr_func_call(context_t * context, expr_func_call_t * func_call) { 
-    
+void visit_expr_func_call(symbol_stack_t * syms, expr_func_call_t * func_call) { 
+    ht_contains(func_table, ); // unoptimized
+        
     // add check that func name is in context hash table 
     
 }
