@@ -63,7 +63,6 @@ typedef struct {
 } htable_t;
 
 typedef struct {
-    htable_t * func_table;
     htable_t * type_table;
     htable_t ** tables;
     stmt_func_decl_t * curr_func;
@@ -264,7 +263,8 @@ typedef struct {
 
 
 // TODO:
-// add type_info_t to hash table value-pointer.
+// fix all the visit stmt function
+// fix the visit_expr 
 
 // NOTE:
 // "In a standard C compiler, the lexer performs a lookup for every identifier it encounters
@@ -278,29 +278,6 @@ type_info_t * create_type_info (type_id_t * type, int nesting) {
     type_info->byte_size = 4; // TEMPORARY
     type_info->nesting = nesting;
     return type_info;
-}
-
-void visit_stmt_block(symbol_stack_t * syms, stmt_block_t * block) {
-    sym_stack_push(syms);
-    for (size_t i = 0; i < block->len; i++) {
-        visit_stmt(syms, block->stmts[i]);
-    }
-    sym_stack_pop(syms);
-}
-
-void visit_func_decl(symbol_stack_t * syms, stmt_func_decl_t * func_decl) {
-    sym_contains_type(syms, func_decl->type);
-    ht_put(syms->func_table, func_decl->func_id->lexeme, )
-    sym_stack_push(syms);
-    for (size_t i = 0; i < func_decl->param_len; i++) {
-        char * name = func_decl->params[i]->stmt_id_decl->variable;
-        ht_put(syms->tables[syms->len-1], name, func_decl->type);
-    }
-    
-    for (size_t i = 0; i < func_decl->block->len; i++) {
-        visit_stmt(syms, func_decl->block->stmts[i]);
-    }
-    sym_stack_pop(syms);
 }
 
 
@@ -330,6 +307,34 @@ type_id_t * sym_get_type(symbol_stack_t * syms, char * name) {
 }
 
 
+void visit_stmt_block(symbol_stack_t * syms, stmt_block_t * block) {
+    sym_stack_push(syms);
+    for (size_t i = 0; i < block->len; i++) {
+        visit_stmt(syms, block->stmts[i]);
+    }
+    sym_stack_pop(syms);
+}
+
+void visit_func_decl(symbol_stack_t * syms, stmt_func_decl_t * func_decl) {
+    sym_contains_type(syms, func_decl->type);
+    if (!ht_contains(syms->tables[0], func_decl->func_id->lexeme))
+        { ht_put(syms->tables[0], func_decl->func_id->lexeme, func_decl->type); }
+
+    sym_stack_push(syms);
+    for (size_t i = 0; i < func_decl->param_len; i++) {
+        char * name = func_decl->params[i]->stmt_id_decl->variable;
+        ht_put(syms->tables[syms->len-1], name, func_decl->type);
+    }
+    
+    for (size_t i = 0; i < func_decl->block->len; i++) {
+        visit_stmt(syms, func_decl->block->stmts[i]);
+    }
+    sym_stack_pop(syms);
+}
+
+
+
+
 void visit_stmt_id_decl(symbol_stack_t * syms, stmt_id_decl_t * id_decl) {
     sym_contains_type(syms, id_decl->type);
 
@@ -338,7 +343,7 @@ void visit_stmt_id_decl(symbol_stack_t * syms, stmt_id_decl_t * id_decl) {
         { visit_expr(syms , id_decl->value, id_decl->type); }
     
     if (ht_contains(syms->tables[syms->len - 1], id_decl->variable->lexeme))
-        { ht_put(syms->tables[syms->len-1], id_decl->variable, id_decl->type); }
+        { ht_put(syms->tables[syms->len - 1], id_decl->variable, id_decl->type); }
 
     ht_put(syms->tables[syms->len-1], id_decl->variable, id_decl->type);
 }
@@ -353,8 +358,14 @@ void visit_stmt_assign(symbol_stack_t * syms, stmt_assign_t * assign) {
 
 void visit_stmt_while(symbol_stack_t * syms, stmt_while_t * while_stmt) {
     visit_expr(while_stmt->cond, &(type_id_t){0, TOKEN_BOOL});
-
     visit_block_stmt(while_stmt->block);
+}
+
+void visit_stmt_if(symbol_stack_t * syms, stmt_if_t * if_stmt) {
+    visit_expr(if_stmt->cond, &(type_id_t){0, TOKEN_BOOL});
+    visit_block_stmt(if_stmt->then);
+    if (if_stmt->or_else) 
+        { visit_block_stmt(if_stmt->or_else); }
 }
 
 void visit_stmt_return(symbol_stack_t * syms, expr_t * ret_expr) { 
@@ -362,78 +373,69 @@ void visit_stmt_return(symbol_stack_t * syms, expr_t * ret_expr) {
 } 
 
 
-void visit_expr_func_call(symbol_stack_t * syms, expr_func_call_t * func_call) { 
-    ht_contains(func_table, ); // unoptimized
+//NEXT: FIX THIS MESS
+void visit_expr(symbol_stack_t * syms, expr_t * e, type_id_t * expected) {
+    // Use binop funcs above for this.
+    //recursion yippie :)
+    switch (e->tag) {
+    case EXPR_BINOP:
+        if (!(binop_return_type(e->binop.op) == expected)) 
+            { printf("ERROR: wrong type for binop"); exit(EXIT_FAILURE); }
         
-    // add check that func name is in context hash table 
-    
+        enum Primitive expected = binop_expected_type(e->binop.op);
+        visit_expr(e->binop.left, expected);
+        visit_expr(e->binop.right, expected);
+        break;
+    case EXPR_FUNC_CALL:
+        
+        break;
+    case EXPR_NUMERAL:
+        if (expected_type != I32) 
+            { printf("ERROR: wrong type for numeral"); exit(EXIT_FAILURE); }  
+        break;
+    case EXPR_UNARY:
+        if (!(unary_expected_type(e->unary.op) == expected_type)) 
+            { printf("ERROR: wrong type for unary"); exit(EXIT_FAILURE); }
+
+        visit_expr(e->unary.inner, unary_expected_type(e->unary.op));
+        break;
+    case EXPR_ID:
+        /* code */
+        break;
+        
+    default:
+        break;
+    }
+
 }
-
-
-// We want to chain some expected types
-//This is all wrong
-// char * visit_expr(symbol_stack_t * syms, expr_t * e, ) {
-//     // Use binop funcs above for this.
-//     //recursion yippie :)
-//     switch (e->tag) {
-//     case EXPR_BINOP:
-//         if (!(binop_return_type(e->binop.op) == expected_type)) 
-//             { printf("ERROR: wrong type for binop"); exit(EXIT_FAILURE); }
-        
-//         enum Primitive expected = binop_expected_type(e->binop.op);
-//         visit_expr(e->binop.left, expected);
-//         visit_expr(e->binop.right, expected);
-//         break;
-//     case EXPR_FUNC_CALL:
-        
-//         break;
-//     case EXPR_NUMERAL:
-//         if (expected_type != I32) 
-//             { printf("ERROR: wrong type for numeral"); exit(EXIT_FAILURE); }  
-//         break;
-//     case EXPR_UNARY:
-//         if (!(unary_expected_type(e->unary.op) == expected_type)) 
-//             { printf("ERROR: wrong type for unary"); exit(EXIT_FAILURE); }
-
-//         visit_expr(e->unary.inner, unary_expected_type(e->unary.op));
-//         break;
-//     case EXPR_ID:
-//         /* code */
-//         break;
-        
-//     default:
-//         break;
-//     }
-
-// }
 
 
 void visit_stmt(symbol_stack_t * syms, stmt_t * stmt) {
     if (stmt->tag == STMT_IF) {
-        visit_stmt_if();
+        visit_stmt_if(syms, stmt->stmt_if);
     }
     if (stmt->tag == STMT_ID_DECL) {
-        visit_stmt_id_decl();
+        visit_stmt_id_decl(syms, stmt->stmt_id_decl);
     }
     if (stmt->tag == STMT_ASSIGN) {
-        visit_stmt_assign();
+        visit_stmt_assign(syms, stmt->stmt_assign);
     }
     if (stmt->tag == STMT_FUNC_CALL) {
-        visit_stmt_func_call();
+        visit_stmt_func_call(syms, stmt->func_call);
     }
     if (stmt->tag == STMT_WHILE) {
-        visit_stmt_while();
+        visit_stmt_while(syms, stmt->stmt_while);
     }
     if (stmt->tag == STMT_RETURN) {
-        visit_stmt_return();
+        visit_stmt_return(syms, stmt->stmt_return);
     }
     if (stmt->tag == STMT_BLOCK) {
-        visit_stmt_block();
+        visit_stmt_block(syms, stmt->stmt_block);
     }
 }
 // this should only be for program
 // if (stmt->tag == STMT_FUNC_DECL) {
-//     visit_stmt_func_decl()
+//     visit_stmt_func_decl();
 // }
 
 
