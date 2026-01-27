@@ -63,6 +63,7 @@ typedef struct {
 } htable_t;
 
 typedef struct {
+    htable_t * func_id_to_func;
     htable_t * type_table;
     htable_t ** tables;
     stmt_func_decl_t * curr_func;
@@ -226,6 +227,7 @@ void * ht_del(htable_t * table, char * key) {
 
 symbol_stack_t * create_symbol_stack() {
     symbol_stack_t * syms = calloc(1, sizeof(symbol_stack_t));
+    syms->func_id_to_func = create_hash_table();
     syms->tables = calloc(TEMP_MAX_SYMBOL_TABLE_SIZE, sizeof(htable_t *));
     syms->tables[0] = create_hash_table();
     syms->len = 1;
@@ -251,7 +253,6 @@ void sym_stack_pop(symbol_stack_t * syms) {
     syms->tables[ --syms->len ] = NULL;
 }
 
-
 typedef struct {
     type_id_t * type;
     size_t byte_size;
@@ -259,6 +260,11 @@ typedef struct {
     // offset func decl 
 } type_info_t;
 
+type_id_t * create_type_id(int ptr, enum TokenType type) {
+    type_id_t * new_type = calloc(1, sizeof(type_id_t));
+    new_type->ptr = ptr;
+    new_type->type = type;
+}
 
 
 
@@ -348,8 +354,6 @@ void visit_stmt_id_decl(symbol_stack_t * syms, stmt_id_decl_t * id_decl) {
     ht_put(syms->tables[syms->len-1], id_decl->variable, id_decl->type);
 }
 
-
-
 void visit_stmt_assign(symbol_stack_t * syms, stmt_assign_t * assign) {
     sym_contains_name(syms, assign->variable->lexeme);
     visit_expr(assign->value, sym_get_type(syms, assign->variable->lexeme));
@@ -369,46 +373,49 @@ void visit_stmt_if(symbol_stack_t * syms, stmt_if_t * if_stmt) {
 }
 
 void visit_stmt_return(symbol_stack_t * syms, expr_t * ret_expr) { 
-    visit_expr(ret_expr, syms->curr_func->type); 
+    visit_expr(syms, ret_expr, syms->curr_func->type);
 } 
 
+void visit_unary(symbol_stack_t * syms, expr_t * e) {
+
+
+}
 
 //NEXT: FIX THIS MESS
-void visit_expr(symbol_stack_t * syms, expr_t * e, type_id_t * expected) {
+type_id_t * visit_expr(symbol_stack_t * syms, expr_t * e, type_id_t * expected) {
     // Use binop funcs above for this.
     //recursion yippie :)
     switch (e->tag) {
     case EXPR_BINOP:
-        if (!(binop_return_type(e->binop.op) == expected)) 
+        if (!(binop_return_type(e->binop.op) == expected))
             { printf("ERROR: wrong type for binop"); exit(EXIT_FAILURE); }
         
         enum Primitive expected = binop_expected_type(e->binop.op);
-        visit_expr(e->binop.left, expected);
-        visit_expr(e->binop.right, expected);
+        type_id_t * left = visit_expr(syms, e->binop.left, expected);
+        type_id_t * left = visit_expr(syms, e->binop.right, expected);
         break;
     case EXPR_FUNC_CALL:
-        
-        break;
+        stmt_func_decl_t * func_decl = ht_get(syms->func_id_to_func, e->func_call.func_id);
+        if (!func_decl) 
+            { printf("ERROR: function not defined.\n"); exit(EXIT_FAILURE); }
+        return func_decl->type;
     case EXPR_NUMERAL:
-        if (expected_type != I32) 
-            { printf("ERROR: wrong type for numeral"); exit(EXIT_FAILURE); }  
-        break;
+        return create_type_id(0, TOKEN_NUM);
     case EXPR_UNARY:
+        e->unary;
         if (!(unary_expected_type(e->unary.op) == expected_type)) 
             { printf("ERROR: wrong type for unary"); exit(EXIT_FAILURE); }
 
         visit_expr(e->unary.inner, unary_expected_type(e->unary.op));
         break;
     case EXPR_ID:
-        /* code */
-        break;
+        return sym_get_type(syms, e->id.lexeme);
         
     default:
         break;
     }
 
 }
-
 
 void visit_stmt(symbol_stack_t * syms, stmt_t * stmt) {
     if (stmt->tag == STMT_IF) {
@@ -437,8 +444,6 @@ void visit_stmt(symbol_stack_t * syms, stmt_t * stmt) {
 // if (stmt->tag == STMT_FUNC_DECL) {
 //     visit_stmt_func_decl();
 // }
-
-
 
 int main() {
     char * str = calloc(64, sizeof(char));
