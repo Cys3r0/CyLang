@@ -24,33 +24,41 @@
 
 
 int is_binop(enum TokenType token_type) {
-    //works for now
-    
-    int ret = token_type == TOKEN_ADD
+    return     token_type == TOKEN_ADD
             || token_type == TOKEN_MUL
             || token_type == TOKEN_SUB
             || token_type == TOKEN_DIV
             || token_type == TOKEN_MOD
-            || token_type == TOKEN_EXPONENT;
-    return ret;
+            || token_type == TOKEN_EXPONENT
+            || token_type == TOKEN_EQ
+            || token_type == TOKEN_NEQ
+            || token_type == TOKEN_GEQ
+            || token_type == TOKEN_GT
+            || token_type == TOKEN_LEQ
+            || token_type == TOKEN_LT
+            || token_type == TOKEN_BIT_AND
+            || token_type == TOKEN_BIT_OR
+            || token_type == TOKEN_BIT_XOR
+            || token_type == TOKEN_LOG_AND
+            || token_type == TOKEN_LOG_OR;
 }
 
 int is_right_associative(enum TokenType token_type) {
-    //works for now
     int ret = token_type == TOKEN_EXPONENT;
     return ret;
 }
 
 int is_unary(enum TokenType token_type) {
-    //works for now
-    return token_type == TOKEN_SUB
+    return     token_type == TOKEN_SUB
             || token_type == TOKEN_ADD
             || token_type == TOKEN_ADDRESSOF
-            || token_type == TOKEN_DEREF;
+            || token_type == TOKEN_DEREF
+            || token_type == TOKEN_LOG_NOT
+            || token_type == TOKEN_BIT_NOT; 
 }
 
 int is_atom(enum ExprType type) {
-    return type == EXPR_NUMERAL
+    return     type == EXPR_NUMERAL
             || type == EXPR_ID
             || type == EXPR_FUNC_CALL;
 }
@@ -104,7 +112,6 @@ expr_t * create_atom_expr(token_t * tok) {
 
     return exp;
 }
-
 
 expr_t * parse_expr(lexer_t * lex);
 
