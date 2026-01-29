@@ -268,8 +268,7 @@ type_id_t * create_type_id(int ptr, enum TokenType type) {
 
 
 // TODO:
-// fix all the visit stmt function
-// fix the visit_expr 
+// fix a program vector that can be iterate through.
 
 // NOTE:
 // "In a standard C compiler, the lexer performs a lookup for every identifier it encounters
@@ -376,13 +375,12 @@ void visit_stmt_return(symbol_stack_t * syms, expr_t * ret_expr) {
 void binop_expected(enum TokenType t) { 
     if (t == TOKEN_SUB || t == TOKEN_ADD) return TOKEN_NUM;
     if (t == TOKEN_DEREF) return TOKEN_NUM;
-
 }
 
 
-//NEXT: FIX THIS MESS
+// needs refactor
 type_id_t * visit_expr(symbol_stack_t * syms, expr_t * e) {
-    // this needs a free_expr_chain.
+    // this needs a free_expr_chain. How would that be implemented
     switch (e->tag) {
         case EXPR_BINOP:
             enum TokenType op_type = e->binop.op;
