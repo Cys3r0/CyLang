@@ -269,6 +269,7 @@ type_id_t * create_type_id(int ptr, enum TokenType type) {
 
 // TODO:
 // fix a program vector that can be iterate through.
+// add checks for visit expr
 
 // NOTE:
 // "In a standard C compiler, the lexer performs a lookup for every identifier it encounters
@@ -308,6 +309,85 @@ type_id_t * sym_get_type(symbol_stack_t * syms, char * name) {
 
     printf("ERROR: name not defined."); 
     exit(EXIT_FAILURE);
+}
+
+// needs refactor
+type_id_t * visit_expr(symbol_stack_t * syms, expr_t * e) {
+    // memory leaky with all the callocs for each type.
+    // this needs a free_expr_chain. How would that be implemented
+    switch (e->tag) {
+        case EXPR_BINOP:
+            enum TokenType op_type = e->binop.op;
+            enum TokenType expected = TOKEN_EOF;
+            enum TokenType ret = TOKEN_EOF;
+
+            type_id_t * left = visit_expr(syms, e->binop.left);
+            type_id_t * right = visit_expr(syms, e->binop.right);
+
+            if (   op_type == TOKEN_ADD     || op_type == TOKEN_MUL
+                || op_type == TOKEN_SUB     || op_type == TOKEN_DIV
+                || op_type == TOKEN_MOD     || op_type == TOKEN_EXPONENT
+                || op_type == TOKEN_BIT_AND || op_type == TOKEN_BIT_OR
+                || op_type == TOKEN_BIT_XOR ) {
+                expected = ret = TOKEN_NUM;
+            }
+            else if (op_type == TOKEN_EQ  || op_type == TOKEN_NEQ
+                  || op_type == TOKEN_GEQ || op_type == TOKEN_GT
+                  || op_type == TOKEN_LEQ || op_type == TOKEN_LT) {
+                expected = TOKEN_NUM;
+                ret = TOKEN_BOOL;
+            }
+            else if (op_type == TOKEN_LOG_AND || op_type == TOKEN_LOG_OR) 
+                { expected = ret = TOKEN_BOOL; }
+
+            if (left->ptr || right->ptr || (left->type != expected) || (right->type != expected)) 
+                { printf("ERROR: type doesn't match expected. \n"); exit(EXIT_FAILURE); }
+
+            return create_type_id(0, ret);
+        case EXPR_FUNC_CALL:
+            stmt_func_decl_t * func_decl = ht_get(syms->func_id_to_func, e->func_call.func_id);
+            if (!func_decl) 
+                { printf("ERROR: function not defined.\n"); exit(EXIT_FAILURE); }
+            return func_decl->type;
+        case EXPR_NUMERAL:
+            return create_type_id(0, TOKEN_NUM);
+        case EXPR_UNARY:
+            type_id_t * type_inner = visit_expr(syms, e->unary.inner);
+            enum TokenType expected = TOKEN_EOF;
+            int ptr = 0;
+
+            if (e->unary.op == TOKEN_ADD || e->unary.op == TOKEN_ADD || e->unary.op == TOKEN_BIT_NOT) 
+                { expected = TOKEN_NUM; }
+            else if (e->unary.op == TOKEN_LOG_NOT)  
+                { expected = TOKEN_BOOL; } 
+            else if (e->unary.op == TOKEN_DEREF)  
+                { ptr = 1; }            
+            else if (e->unary.op == TOKEN_ADDRESSOF)  
+                { ptr = -1; }    
+            else 
+                { assert(0); } // unreachable (hopely)
+
+            if (expected == TOKEN_EOF) 
+                { return create_type_id(type_inner->ptr + ptr, type_inner->type); }
+
+            if (type_inner->type == expected)
+                { printf("ERROR: inner type not expected"); exit(EXIT_FAILURE); }
+
+            // works for now
+            return create_type_id(type_inner->ptr + ptr, type_inner->type);
+
+        case EXPR_ID:
+            return sym_get_type(syms, e->id.lexeme);
+    }    
+
+    assert(0); 
+}
+
+void typecheck_expr(symbol_stack_t * syms, expr_t * e, type_id_t * expected) {
+    type_id_t * actual = visit_expr(syms, e);
+
+    if (actual->ptr != expected->ptr || actual->type != expected->type) 
+        { printf("ERROR: return type doesn't match.\n"); exit(EXIT_FAILURE); }
 }
 
 
@@ -369,83 +449,18 @@ void visit_stmt_if(symbol_stack_t * syms, stmt_if_t * if_stmt) {
 }
 
 void visit_stmt_return(symbol_stack_t * syms, expr_t * ret_expr) { 
-    visit_expr(syms, ret_expr, syms->curr_func->type);
+    type_id_t * ret_type = visit_expr(syms, ret_expr);
+    type_id_t * expected = syms->curr_func->type;
+    if (ret_type->ptr != expected->ptr || ret_type->type != expected->type) 
+        { printf("ERROR: return type doesn't match.\n"); exit(EXIT_FAILURE); }
 } 
 
-void binop_expected(enum TokenType t) { 
+enum TokenType binop_expected(enum TokenType t) { 
     if (t == TOKEN_SUB || t == TOKEN_ADD) return TOKEN_NUM;
     if (t == TOKEN_DEREF) return TOKEN_NUM;
+    assert(0);
 }
 
-
-// needs refactor
-type_id_t * visit_expr(symbol_stack_t * syms, expr_t * e) {
-    // this needs a free_expr_chain. How would that be implemented
-    switch (e->tag) {
-        case EXPR_BINOP:
-            enum TokenType op_type = e->binop.op;
-            enum TokenType expected = TOKEN_EOF;
-            enum TokenType ret = TOKEN_EOF;
-            type_id_t * left = visit_expr(syms, e->binop.left);
-            type_id_t * right = visit_expr(syms, e->binop.right);
-
-            if (op_type == TOKEN_ADD     || op_type == TOKEN_MUL
-                || op_type == TOKEN_SUB     || op_type == TOKEN_DIV
-                || op_type == TOKEN_MOD     || op_type == TOKEN_EXPONENT
-                || op_type == TOKEN_BIT_AND || op_type == TOKEN_BIT_OR
-                || op_type == TOKEN_BIT_XOR ) {
-                expected = ret = TOKEN_NUM;
-            }
-            else if (op_type == TOKEN_EQ || op_type == TOKEN_NEQ
-                || op_type == TOKEN_GEQ || op_type == TOKEN_GT
-                || op_type == TOKEN_LEQ || op_type == TOKEN_LT) {
-                expected = TOKEN_NUM;
-                ret = TOKEN_BOOL;
-            }
-            else if (op_type == TOKEN_LOG_AND || op_type == TOKEN_LOG_OR) 
-                { expected = ret = TOKEN_BOOL; }
-
-            if (left->ptr || right->ptr || (left->type != expected) || (right->type != expected)) 
-                { printf("ERROR: type doesn't match expected. \n"); exit(EXIT_FAILURE); }
-
-            return create_type_id(0, ret);
-        case EXPR_FUNC_CALL:
-            stmt_func_decl_t * func_decl = ht_get(syms->func_id_to_func, e->func_call.func_id);
-            if (!func_decl) 
-                { printf("ERROR: function not defined.\n"); exit(EXIT_FAILURE); }
-            return func_decl->type;
-        case EXPR_NUMERAL:
-            return create_type_id(0, TOKEN_NUM);
-        case EXPR_UNARY:
-            type_id_t * type_inner = visit_expr(syms, e->unary.inner);
-            enum TokenType expected = TOKEN_EOF;
-            int ptr = 0;
-
-            if (e->unary.op == TOKEN_ADD || e->unary.op == TOKEN_ADD || e->unary.op == TOKEN_BIT_NOT) 
-                { expected = TOKEN_NUM; }
-            else if (e->unary.op == TOKEN_LOG_NOT)  
-                { expected = TOKEN_BOOL; } 
-            else if (e->unary.op == TOKEN_DEREF)  
-                { ptr = 1; }            
-            else if (e->unary.op == TOKEN_ADDRESSOF)  
-                { ptr = -1; }    
-            else 
-                { assert(0); } // unreachable (hopely)
-
-            if (expected == TOKEN_EOF) 
-                { return create_type_id(type_inner->ptr + ptr, type_inner->type); }
-
-            if (type_inner->type == expected)
-                { printf("ERROR: inner type not expected"); exit(EXIT_FAILURE); }
-
-            // works for now
-            return create_type_id(type_inner->ptr + ptr, type_inner->type);
-
-        case EXPR_ID:
-            return sym_get_type(syms, e->id.lexeme);
-    }    
-    assert(0); 
-}
 
 void visit_stmt(symbol_stack_t * syms, stmt_t * stmt) {
     if (stmt->tag == STMT_IF) {
