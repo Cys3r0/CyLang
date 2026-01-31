@@ -422,7 +422,7 @@ void visit_stmt_id_decl(symbol_stack_t * syms, stmt_id_decl_t * id_decl) {
 
     // avoids int i = i; where 'i' already exists in an outer scope. I think.
     if (id_decl->value) 
-        { visit_expr(syms , id_decl->value, id_decl->type); }
+        { typecheck_expr(syms , id_decl->value, id_decl->type); }
     
     if (ht_contains(syms->tables[syms->len - 1], id_decl->variable->lexeme))
         { ht_put(syms->tables[syms->len - 1], id_decl->variable, id_decl->type); }
@@ -432,27 +432,25 @@ void visit_stmt_id_decl(symbol_stack_t * syms, stmt_id_decl_t * id_decl) {
 
 void visit_stmt_assign(symbol_stack_t * syms, stmt_assign_t * assign) {
     sym_contains_name(syms, assign->variable->lexeme);
-    visit_expr(assign->value, sym_get_type(syms, assign->variable->lexeme));
+    typecheck_expr(syms, assign->value, sym_get_type(syms, assign->variable->lexeme));
 }
 
 
 void visit_stmt_while(symbol_stack_t * syms, stmt_while_t * while_stmt) {
-    visit_expr(while_stmt->cond, &(type_id_t){0, TOKEN_BOOL});
+    typecheck_expr(syms, while_stmt->cond, &(type_id_t){0, TOKEN_BOOL});
     visit_block_stmt(while_stmt->block);
 }
 
 void visit_stmt_if(symbol_stack_t * syms, stmt_if_t * if_stmt) {
-    visit_expr(if_stmt->cond, &(type_id_t){0, TOKEN_BOOL});
+    typecheck_expr(syms, if_stmt->cond, &(type_id_t){0, TOKEN_BOOL});
     visit_block_stmt(if_stmt->then);
     if (if_stmt->or_else) 
         { visit_block_stmt(if_stmt->or_else); }
 }
 
 void visit_stmt_return(symbol_stack_t * syms, expr_t * ret_expr) { 
-    type_id_t * ret_type = visit_expr(syms, ret_expr);
     type_id_t * expected = syms->curr_func->type;
-    if (ret_type->ptr != expected->ptr || ret_type->type != expected->type) 
-        { printf("ERROR: return type doesn't match.\n"); exit(EXIT_FAILURE); }
+    typecheck_expr(syms, ret_expr, expected);
 } 
 
 enum TokenType binop_expected(enum TokenType t) { 
