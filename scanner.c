@@ -157,14 +157,17 @@ token_t * scan_next_tok(lexer_t * lex) {
         token_type = TOKEN_DEREF;
     else if (c == '-' && peak_char(1, lex) == '>') {
         token_type =  TOKEN_ADDRESSOF; 
-        end_offset = 2;
+        int peaked = 2;
+        while (peak_char(peaked, lex) == '>') 
+            { peaked++; }
+        
+        value = peaked-1;
+        end_offset = peaked;
     }
     else if (c == '-')
         token_type = TOKEN_SUB;
     else if (c == '+')
         token_type = TOKEN_ADD;
-    else if (c == '-')
-        token_type = TOKEN_SUB;
     else if (c == '*')
         token_type = TOKEN_MUL;
     else if (c == '/')

@@ -446,7 +446,7 @@ stmt_t * parse_stmt_return(lexer_t * lex) {
     return stmt;
 }
 
-struct_decl_t * parse_struct_decl(lexer_t * lex) {
+stmt_struct_decl_t * parse_struct_decl(lexer_t * lex) {
     skip_token(lex, TOKEN_STRUCT);
     token_t * name = take_token(lex);
     skip_token(lex, TOKEN_LWING);
@@ -460,7 +460,7 @@ struct_decl_t * parse_struct_decl(lexer_t * lex) {
     }
 
     skip_token(lex, TOKEN_RWING);
-    struct_decl_t * struct_decl = calloc(1, sizeof(struct_decl_t));
+    stmt_struct_decl_t * struct_decl = calloc(1, sizeof(stmt_struct_decl_t));
     struct_decl->name = name;
     struct_decl->members = members;
     struct_decl->member_len = i;
@@ -547,15 +547,21 @@ stmt_t * parse_stmt(lexer_t * lex) {
             }
             break;
         default: break; // some kind of goto error or something
-    }    
+    }
     
     return stmt;
+}
+
+stmt_t * parse_outer(lexer_t * lex) {
+    if (peak_token(lex) == TOKEN_STRUCT) 
+        { return parse_struct_decl(lex); } 
+    return parse_stmt_func_decl(lex);
 }
 
 stmt_block_t * parse_program(lexer_t * lex) {
     stmt_block_t * program = create_block();
     stmt_t * stmt;
-    while ((stmt = parse_stmt_func_decl(lex))) 
+    while ((stmt = parse_outer(lex))) 
         block_add(stmt, program);
     
     return program;

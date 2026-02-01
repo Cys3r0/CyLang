@@ -94,7 +94,8 @@ enum StmtType {
     STMT_WHILE, 
     STMT_RETURN, 
     STMT_FUNC_DECL,
-    STMT_BLOCK
+    STMT_STRUCT_DECL,
+    STMT_BLOCK,
 };
 
 typedef struct stmt stmt_t;
@@ -134,7 +135,7 @@ typedef struct {
     token_t * name;
     stmt_id_decl_t ** members;
     int member_len;
-} struct_decl_t;
+} stmt_struct_decl_t;
 
 typedef struct {
     expr_t * cond;

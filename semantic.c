@@ -459,6 +459,29 @@ enum TokenType binop_expected(enum TokenType t) {
     assert(0);
 }
 
+/*
+    Current with the compiler:
+    1. A REPL usage would be impossible since pure expr calls are not allowed (only stmt_func_call)
+    2. Type checking is too messy.
+        A. The parsing of pointers is not good. Instead of a counter, use type_nodes instead. 
+        This has easier bookkeeping for size and such. Recurse down both LHS and RHS when typechecking
+    3. Scanner doesn't even properly implement the "->>>>" syntax. 
+        A. This will require a check for the number of ">" used in expressions such that "->(-> b)" or "->> b" as double addressof.
+        const ->> 
+    NEXT: Fix parser type-matching parsing.
+*/
+
+void visit_struct_decl(symbol_stack_t * syms, stmt_struct_decl_t * struct_decl) {
+    // this is where type_info should be added. I'll so it later.
+
+    
+    for (size_t i = 0; i < struct_decl->member_len; i++) {
+        
+    }
+    
+    
+    ht_add(syms->tables[0], );
+}
 
 void visit_stmt(symbol_stack_t * syms, stmt_t * stmt) {
     if (stmt->tag == STMT_IF) {
@@ -484,10 +507,15 @@ void visit_stmt(symbol_stack_t * syms, stmt_t * stmt) {
     }
 }
 
-// this should only be for program
-// if (stmt->tag == STMT_FUNC_DECL) {
-//     visit_stmt_func_decl();
-// }
+void visit_program(stmt_block_t * program) {
+    for (size_t i = 0; i < program->len; i++) {
+        if (program->stmts[i]->tag == STMT_STRUCT_DECL) {
+
+        }
+    }
+    
+
+}
 
 int main() {
     char * str = calloc(64, sizeof(char));

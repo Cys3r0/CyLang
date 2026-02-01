@@ -51,7 +51,6 @@ enum TokenType {
     TOKEN_NONE,
 };
 
-
 typedef struct {
     enum TokenType token_type;
     int col;
