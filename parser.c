@@ -9,7 +9,6 @@
 #define MAX_STRUCT_MEMBER_COUNT 256
 
 
-
 // add boolean expressions and the limitations of that.
 // create unit tests.
 // create program super struct or something with list of func_decls
@@ -22,6 +21,9 @@
 //implement pretty print for exprs
 //test calling functions within functions.
 
+type_info_t ptr_info = {TOKEN_ADDRESSOF, 8, 1};
+type_info_t i32_info = {TOKEN_I32, 4, 1};
+type_info_t bool_info = {TOKEN_BOOL, 1, 1};
 
 int is_binop(enum TokenType token_type) {
     return     token_type == TOKEN_ADD
@@ -267,14 +269,48 @@ int is_primitive(enum TokenType type) {
     return type == TOKEN_BOOL || type == TOKEN_I32;
 }
 
-type_id_t * parse_type(lexer_t * lex) {
-    token_t * tok = take_token(lex); // can be either pointer or type
-    int ptr = 0;
+enum NodeType {
+    PRIMITIVE, POINTER, ARRAY, FUNCTION
+};
 
-    if (tok->token_type == TOKEN_ADDRESSOF) {
-        tok = take_token(lex);
-        ptr = 1;
+typedef struct {
+    enum NodeType tag;
+    type_node_t * next;
+    type_info_t * info;
+} type_node_t;
+
+type_node_t * create_type_node(enum NodeType tag, type_node_t * next, type_info_t * info) {
+    type_node_t * node = calloc(1, sizeof(type_node_t));
+    node->tag = tag;
+    node->next = next;
+    node->info = info;
+}
+
+type_node_t * parse_type(lexer_t * lex) {
+    token_t * tok = take_token(lex); // ptr or type
+    type_node_t * first = NULL;
+    type_node_t * last = NULL;
+    
+    if (tok->token_type == TOKEN_ADDRESSOF) { 
+        first = create_node(POINTER, NULL, ptr_info);
+        type_node_t * last = first;
+
+        for (size_t i = 1; i < tok->value; i++) {
+            last->next = create_node(POINTER, NULL, ptr_info);
+            last = last->next;
+        }
+
+    } 
+    
+    
+    else if(is_primitive(tok->token_type)) {
+        return create_type_node()
+    } 
+
+    if (!first) {
+        return create_type_node()
     }
+
     
     if (!is_primitive(tok->token_type) &&  tok->token_type != TOKEN_ID) {
         printf("ERROR: incorrect type. \n");
@@ -326,8 +362,9 @@ stmt_t * parse_stmt_func_call(lexer_t * lex) {
 }
 
 stmt_t * parse_stmt_id_decl(lexer_t * lex) {
-    type_id_t * type = parse_type(lex);
     token_t * variable = take_token(lex);
+    skip_token(lex, TOKEN_COLON);
+    type_id_t * type = parse_type(lex);
     enum TokenType next = take_token(lex)->token_type;
     expr_t * value = NULL;
     
@@ -446,7 +483,7 @@ stmt_t * parse_stmt_return(lexer_t * lex) {
     return stmt;
 }
 
-stmt_struct_decl_t * parse_struct_decl(lexer_t * lex) {
+stmt_t * parse_struct_decl(lexer_t * lex) {
     skip_token(lex, TOKEN_STRUCT);
     token_t * name = take_token(lex);
     skip_token(lex, TOKEN_LWING);
@@ -465,6 +502,9 @@ stmt_struct_decl_t * parse_struct_decl(lexer_t * lex) {
     struct_decl->members = members;
     struct_decl->member_len = i;
 
+    stmt_t * struct_decl_stmt = calloc(1, sizeof(stmt_t));
+    struct_decl_stmt->tag = STMT_STRUCT_DECL;
+    struct_decl_stmt->stmt_struct;
     return struct_decl;
 }
 
@@ -565,6 +605,13 @@ stmt_block_t * parse_program(lexer_t * lex) {
         block_add(stmt, program);
     
     return program;
+}
+
+int main() {
+    char * source = "-> int a = -> a;";
+    lexer_t * lex = create_lexer(source, strlen(source));
+
+
 }
 
 // int main(int argc, char const *argv[]) {

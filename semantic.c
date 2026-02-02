@@ -465,10 +465,18 @@ enum TokenType binop_expected(enum TokenType t) {
     2. Type checking is too messy.
         A. The parsing of pointers is not good. Instead of a counter, use type_nodes instead. 
         This has easier bookkeeping for size and such. Recurse down both LHS and RHS when typechecking
-    3. Scanner doesn't even properly implement the "->>>>" syntax. 
+    3. DONE Scanner doesn't even properly implement the "->>>>" syntax. 
         A. This will require a check for the number of ">" used in expressions such that "->(-> b)" or "->> b" as double addressof.
         const ->> 
-    NEXT: Fix parser type-matching parsing.
+    4. There should be an id_use expr, I can't remember why though but look it up.
+    5. func_calls, numerals and id_uses should be treated as an atom expr. 
+    6. Primitive types should carry a pointer to const global structs describing byte size, etc. (basically type_info_t).
+    7. Non-primitives type_info should be calculated in visit_struct_decl.
+    8. Accessing members of a struct via dot-notation not implemented, i.e human.height.
+        A. also decide whether to deref automatically (->node.next) or implicitly ( (->)? Node node = node.next; ) 
+    9. Error handling is non-existant right now. 
+
+    NEXT: Fix type-matching parsing.
 */
 
 void visit_struct_decl(symbol_stack_t * syms, stmt_struct_decl_t * struct_decl) {
@@ -513,7 +521,6 @@ void visit_program(stmt_block_t * program) {
 
         }
     }
-    
 
 }
 

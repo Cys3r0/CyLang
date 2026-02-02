@@ -140,6 +140,8 @@ token_t * scan_next_tok(lexer_t * lex) {
     if (c == ';')
         token_type = TOKEN_SEMI;
     else if (c == ',')
+        token_type = TOKEN_COLON;
+    else if (c == ',')
         token_type = TOKEN_COMMA;
     else if (c == '(')
         token_type = TOKEN_LPAR;
@@ -223,15 +225,15 @@ token_t * scan_next_tok(lexer_t * lex) {
     else if (c == 'i' 
         && peak_char(1, lex) == '3'
         && peak_char(2, lex) == '2' 
-        && !is_alphanumeric(peak_char(1, lex))) {
+        && !is_alphanumeric(peak_char(3, lex))) {
             token_type = TOKEN_I32;
             end_offset = 3;
     }
     else if (c == 'b' 
         && peak_char(1, lex) == 'o'
         && peak_char(2, lex) == 'o' 
-        && peak_char(2, lex) == 'l' 
-        && !is_alphanumeric(peak_char(1, lex))) {
+        && peak_char(3, lex) == 'l' 
+        && !is_alphanumeric(peak_char(4, lex))) {
             token_type = TOKEN_BOOL;
             end_offset = 4;
     }
@@ -391,6 +393,8 @@ char * token_to_str(enum TokenType type) {
         case TOKEN_RWING:       return "RWING";
         case TOKEN_LBRACKET:    return "LBRACKET";
         case TOKEN_RBRACKET:    return "RBRACKET";
+        case TOKEN_ADDRESSOF:   return "ADDRESSOF";
+        case TOKEN_COLON:       return "COLON";
         case TOKEN_ADD:         return "ADD";
         case TOKEN_SUB:         return "SUB";
         case TOKEN_MUL:         return "MUL";
@@ -428,16 +432,19 @@ char * token_to_str(enum TokenType type) {
     }
 }
 
+
 int no_main() {
     char * source = "9 if (abs == 10) , A - B print(10000); while (list) {a[]}";
+    source = "->>>>> i32 counter = -> null;";
     lexer_t * lex = create_lexer(source, strlen(source));
     printf("%s\n", lex->source);
 
     for (int i = 1; i < 20; i++) {
-        printf("%d peak: %s\n", i, token_to_str(peak_n_tokens(i, lex)));
+        printf("%s ", token_to_str(peak_n_tokens(i, lex)));
     }
+    printf("\n");
     for (int i = 1; i < 20; i++) {
-        printf("%d take: %s\n", i, token_to_str(take_token(lex)->token_type));
+        printf("%s ", token_to_str(take_token(lex)->token_type));
     }
     
     printf("\n");

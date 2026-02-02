@@ -5,6 +5,7 @@
 
 enum TokenType {
     TOKEN_SEMI, 
+    TOKEN_COLON,
     TOKEN_ASSIGN, 
     TOKEN_COMMA,
     TOKEN_LPAR, 
