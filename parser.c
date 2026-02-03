@@ -299,25 +299,21 @@ type_node_t * parse_type(lexer_t * lex) {
             last->next = create_node(POINTER, NULL, ptr_info);
             last = last->next;
         }
-
+        
+        tok = take_token(lex);  
     } 
-    
-    
-    else if(is_primitive(tok->token_type)) {
-        return create_type_node()
-    } 
+    // TODO:
+    // implement a create_primitive_node function. Fix tmrw
 
-    if (!first) {
-        return create_type_node()
+    if (is_primitive(tok->token_type)) {
+        type_node_t * last_node = create_primitive_node();
+    } else {
+        
     }
+    if (last)
 
     
-    if (!is_primitive(tok->token_type) &&  tok->token_type != TOKEN_ID) {
-        printf("ERROR: incorrect type. \n");
-        exit(EXIT_FAILURE);
-    }
-
-    return create_type(ptr, tok);    
+    return create_type(ptr, tok);
 }
 
 
