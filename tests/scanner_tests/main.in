@@ -1,0 +1,10 @@
+main(ptr: ->>i32, visited: bool) :: int {
+    if (visited) {
+        heavy_compute();
+    } else {
+        return 0;
+    }
+    return 1;
+}
+
+ptr: ->int = @value; 

@@ -20,8 +20,11 @@ char peak_char(int n, lexer_t * lex) {
 }    
 
 char take_char(lexer_t * lex) {
-    char c = lex->source[lex->take_i];
-
+    char c; 
+    if (lex->take_i > lex->source_len) 
+        { return '\0'; }
+    c = lex->source[lex->take_i]; 
+     
     if (c == '\n') {
         lex->row++;
         lex->col = 1;
@@ -101,6 +104,7 @@ lexer_t * create_lexer(char * source, int source_len) {
     return lex;
 }
 
+
 token_t * create_token(enum TokenType token_type, int row, int col, char * lexeme, int value) {
     token_t * tok = malloc(sizeof(token_t));
     tok->token_type = token_type;
@@ -139,7 +143,7 @@ token_t * scan_next_tok(lexer_t * lex) {
 
     if (c == ';')
         token_type = TOKEN_SEMI;
-    else if (c == ',')
+    else if (c == ':')
         token_type = TOKEN_COLON;
     else if (c == ',')
         token_type = TOKEN_COMMA;
@@ -385,6 +389,7 @@ void skip_token(lexer_t * lex, enum TokenType skipped) {
 char * token_to_str(enum TokenType type) {
     switch (type) {
         case TOKEN_SEMI:        return "SEMI";
+        case TOKEN_COLON:       return "COLON";
         case TOKEN_ASSIGN:      return "ASSIGN";
         case TOKEN_COMMA:       return "COMMA";
         case TOKEN_LPAR:        return "LPAR";
@@ -393,8 +398,6 @@ char * token_to_str(enum TokenType type) {
         case TOKEN_RWING:       return "RWING";
         case TOKEN_LBRACKET:    return "LBRACKET";
         case TOKEN_RBRACKET:    return "RBRACKET";
-        case TOKEN_ADDRESSOF:   return "ADDRESSOF";
-        case TOKEN_COLON:       return "COLON";
         case TOKEN_ADD:         return "ADD";
         case TOKEN_SUB:         return "SUB";
         case TOKEN_MUL:         return "MUL";
@@ -414,6 +417,7 @@ char * token_to_str(enum TokenType type) {
         case TOKEN_BIT_OR:      return "BIT_OR";
         case TOKEN_BIT_XOR:     return "BIT_XOR";
         case TOKEN_DEREF:       return "DEREF";
+        case TOKEN_ADDRESSOF:   return "ADDRESSOF";
         case TOKEN_I32:         return "I32";
         case TOKEN_BOOL:        return "BOOL";
         case TOKEN_PASS:        return "PASS";
@@ -421,6 +425,7 @@ char * token_to_str(enum TokenType type) {
         case TOKEN_ELSE:        return "ELSE";
         case TOKEN_RETURN:      return "RETURN";
         case TOKEN_WHILE:       return "WHILE";
+        case TOKEN_STRUCT:      return "STRUCT";
         case TOKEN_ID:          return "ID";
         case TOKEN_NUM:         return "NUM";
         case TOKEN_EXPONENT:    return "EXPONENT";
@@ -428,21 +433,22 @@ char * token_to_str(enum TokenType type) {
         case TOKEN_NEWLINE:     return "NEWLINE";
         case TOKEN_EOF:         return "EOF";
         case TOKEN_ERROR:       return "ERROR";
-        default:                return "NONE";
+        case TOKEN_NONE:        return "NONE";
+        default:                return "UNKNOWN_TOKEN";
     }
 }
 
 
 int no_main() {
-    char * source = "9 if (abs == 10) , A - B print(10000); while (list) {a[]}";
-    source = "->>>>> i32 counter = -> null;";
+    // source = "->>>>> i32 counter = -> null;";
+    char * source = "main(ptr: ->>i32)";
     lexer_t * lex = create_lexer(source, strlen(source));
     printf("%s\n", lex->source);
 
-    for (int i = 1; i < 20; i++) {
-        printf("%s ", token_to_str(peak_n_tokens(i, lex)));
-    }
-    printf("\n");
+    // for (int i = 1; i < 20; i++) {
+    //     printf("%s ", token_to_str(peak_n_tokens(i, lex)));
+    // }
+    // printf("\n");
     for (int i = 1; i < 20; i++) {
         printf("%s ", token_to_str(take_token(lex)->token_type));
     }

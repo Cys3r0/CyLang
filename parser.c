@@ -2,6 +2,8 @@
 #include "parser.h" 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <assert.h>
 
 #define MAX_ARGS 64
 #define MAX_STMTS_IN_BLOCK 1024
@@ -258,62 +260,48 @@ expr_t * parse_expr(lexer_t * lex) {
 
 stmt_t * parse_stmt(lexer_t * lex);
 
-type_id_t * create_type(int ptr, token_t * type) {
-    type_id_t * new_type = calloc(1, sizeof(type_id_t));
-    new_type->ptr  = ptr;
-    new_type->type = type;
-    return new_type;
-}
-
 int is_primitive(enum TokenType type) {
     return type == TOKEN_BOOL || type == TOKEN_I32;
 }
 
-enum NodeType {
-    PRIMITIVE, POINTER, ARRAY, FUNCTION
-};
-
-typedef struct {
-    enum NodeType tag;
-    type_node_t * next;
-    type_info_t * info;
-} type_node_t;
-
-type_node_t * create_type_node(enum NodeType tag, type_node_t * next, type_info_t * info) {
+type_node_t * create_type_node(enum NodeType tag, type_info_t * info) {
     type_node_t * node = calloc(1, sizeof(type_node_t));
     node->tag = tag;
-    node->next = next;
+    node->next = NULL;
     node->info = info;
+    return node;
 }
 
 type_node_t * parse_type(lexer_t * lex) {
     token_t * tok = take_token(lex); // ptr or type
     type_node_t * first = NULL;
     type_node_t * last = NULL;
-    
+    type_node_t * leaf = NULL;
+
+    // Not as ugly syntactically as in code here.
     if (tok->token_type == TOKEN_ADDRESSOF) { 
-        first = create_node(POINTER, NULL, ptr_info);
+        first = create_type_node(POINTER, &ptr_info);
         type_node_t * last = first;
 
         for (size_t i = 1; i < tok->value; i++) {
-            last->next = create_node(POINTER, NULL, ptr_info);
+            last->next = create_type_node(POINTER, &ptr_info);
             last = last->next;
         }
         
         tok = take_token(lex);  
     } 
-    // TODO:
-    // implement a create_primitive_node function. Fix tmrw
 
-    if (is_primitive(tok->token_type)) {
-        type_node_t * last_node = create_primitive_node();
-    } else {
-        
-    }
-    if (last)
-
+    else if (tok->token_type == TOKEN_ID) 
+        { leaf = create_type_node(STRUCT, NULL); }
+    else if (tok->token_type == TOKEN_BOOL) 
+        { leaf = create_type_node(PRIMITIVE, &bool_info); }
+    else if (tok->token_type == TOKEN_BOOL) 
+        { leaf = create_type_node(PRIMITIVE, &i32_info); }
+    else 
+        { assert(0); }
     
-    return create_type(ptr, tok);
+    last->next = leaf;
+    return first;
 }
 
 
@@ -360,7 +348,7 @@ stmt_t * parse_stmt_func_call(lexer_t * lex) {
 stmt_t * parse_stmt_id_decl(lexer_t * lex) {
     token_t * variable = take_token(lex);
     skip_token(lex, TOKEN_COLON);
-    type_id_t * type = parse_type(lex);
+    type_node_t * type = parse_type(lex);
     enum TokenType next = take_token(lex)->token_type;
     expr_t * value = NULL;
     
@@ -500,13 +488,13 @@ stmt_t * parse_struct_decl(lexer_t * lex) {
 
     stmt_t * struct_decl_stmt = calloc(1, sizeof(stmt_t));
     struct_decl_stmt->tag = STMT_STRUCT_DECL;
-    struct_decl_stmt->stmt_struct;
-    return struct_decl;
+    struct_decl_stmt->stmt_struct = struct_decl;
+    return struct_decl_stmt;
 }
 
 stmt_t * parse_stmt_func_decl(lexer_t * lex) {
     // add check for TOKEN_EOF
-    type_id_t * type = parse_type(lex);
+    type_node_t * type = parse_type(lex);
     token_t * name = take_token(lex);
     skip_token(lex, TOKEN_LPAR);
     enum TokenType peak = peak_token(lex);
@@ -606,8 +594,13 @@ stmt_block_t * parse_program(lexer_t * lex) {
 int main() {
     char * source = "-> int a = -> a;";
     lexer_t * lex = create_lexer(source, strlen(source));
+    for (size_t i = 0; i < 20; i++)
+    {
+        printf()
+    }
+    
 
-
+    return 0;
 }
 
 // int main(int argc, char const *argv[]) {

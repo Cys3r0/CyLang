@@ -8,7 +8,7 @@
 #define MAX_ARGS 64
 
 enum NodeType {
-    PRIMITIVE, POINTER, ARRAY, FUNCTION
+    PRIMITIVE, POINTER, ARRAY, FUNCTION, STRUCT
 };
 
 typedef struct {
@@ -17,11 +17,13 @@ typedef struct {
     int alignment;
 } type_info_t;
 
-typedef struct {
+typedef struct type_node_t type_node_t;
+
+struct type_node_t {
     enum NodeType tag;
     type_node_t * next;
     type_info_t * info;
-} type_node_t;
+};
 
 extern type_info_t ptr_info;
 extern type_info_t i32_info;
@@ -96,13 +98,6 @@ expr_t * parse_expr_recursive(expr_t * lhs, int min_precedence, lexer_t * lex, e
 expr_t * parse_expr(lexer_t * lex) ;
 
 
-
-typedef struct {
-    int ptr; 
-    token_t * type;
-    void * info;
-} type_id_t;
-
 int is_primitive(enum TokenType type) ;
 
 //stmts
@@ -134,7 +129,7 @@ typedef struct {
 } stmt_if_t;
 
 typedef struct {
-    type_id_t * type;
+    type_node_t * type;
     token_t * variable;
     expr_t * value;
 } stmt_id_decl_t;
@@ -145,7 +140,7 @@ typedef struct {
 } stmt_assign_t;
 
 typedef struct {
-    type_id_t * type;
+    type_node_t * type;
     token_t * func_id;
     stmt_t ** params; // id_decls
     int param_len;
