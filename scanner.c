@@ -3,7 +3,7 @@
 #include <string.h>
 #include <assert.h>
 #include "scanner.h"
-// #include <regex.h>
+#include "tests/test_utils.h"
 
 
 #define RINGBUF_SIZE 20
@@ -24,10 +24,14 @@ char take_char(lexer_t * lex) {
     if (lex->take_i > lex->source_len) 
         { return '\0'; }
     c = lex->source[lex->take_i]; 
-     
+    
     if (c == '\n') {
         lex->row++;
         lex->col = 1;
+    } else if (c == '\t') {
+        lex->col+=4;
+    } else if (c == '\v') { // not sure if correct
+        lex->row++;
     } else {
         lex->col++;
     }
@@ -136,7 +140,7 @@ token_t * scan_next_tok(lexer_t * lex) {
     unsigned int valid_char = 0;
     char c = take_char(lex);
 
-    while (c == ' ' || c == '\n') {
+    while (c == ' ' || c == '\n' || c == '\t' || c == '\r' || c == '\v') {
         lex->take_i++;
         c = take_char(lex);
     }
@@ -439,17 +443,19 @@ char * token_to_str(enum TokenType type) {
 }
 
 
-int no_main() {
+int main() {
     // source = "->>>>> i32 counter = -> null;";
-    char * source = "main(ptr: ->>i32)";
+    char * source;
+    int source_len;
+    read_file_stdin(&source, &source_len);
     lexer_t * lex = create_lexer(source, strlen(source));
     printf("%s\n", lex->source);
 
     // for (int i = 1; i < 20; i++) {
     //     printf("%s ", token_to_str(peak_n_tokens(i, lex)));
     // }
-    // printf("\n");
-    for (int i = 1; i < 20; i++) {
+    printf("\n");
+    for (int i = 1; i < 80; i++) {
         printf("%s ", token_to_str(take_token(lex)->token_type));
     }
     
