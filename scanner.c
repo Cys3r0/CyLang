@@ -48,7 +48,7 @@ int is_letter(char c) {
 }    
 
 int is_alphanumeric(char c) {
-    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || ('0' <= c && c <= '9');
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || ('0' <= c && c <= '9') || c == '_';
 }    
 
 void ringbuf_put(tok_ringbuf_t * rb, token_t * tok) {
@@ -93,6 +93,7 @@ tok_ringbuf_t create_ringbuf() {
     tok_ringbuf_t rb;
     rb.write_i = 0;
     rb.read_i = 0;
+    rb.length = 0;
     rb.data = calloc(RINGBUF_SIZE, sizeof(token_t *));
     return rb;
 }
@@ -264,7 +265,7 @@ token_t * scan_next_tok(lexer_t * lex) {
     }
     else if (c == 'i' 
         && peak_char(1, lex) == 'f' 
-        && !is_alphanumeric(peak_char(1, lex))) {
+        && !is_alphanumeric(peak_char(2, lex))) {
             token_type = TOKEN_IF;
             end_offset = 2;
     }
@@ -443,8 +444,9 @@ char * token_to_str(enum TokenType type) {
 }
 
 
-int main() {
+int nomain() {
     // source = "->>>>> i32 counter = -> null;";
+    // TODO: Create an all_tokens.in test file
     char * source;
     int source_len;
     read_file_stdin(&source, &source_len);

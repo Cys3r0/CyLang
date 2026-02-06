@@ -1,6 +1,6 @@
-#import <stddef.h>
-#import <stdlib.h>
-#import <unistd.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 void read_file_stdin(char ** source, int * source_len) {
     size_t cap = 4096;
