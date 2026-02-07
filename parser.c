@@ -23,6 +23,17 @@
 //implement pretty print for exprs
 //test calling functions within functions.
 
+char * node_type_to_string(enum NodeType tag) {
+    switch (tag) {
+        case PRIMITIVE:     return "PRIMITIVE";
+        case POINTER:       return "POINTER";
+        case ARRAY:         return "ARRAY";
+        case FUNCTION:      return "FUNCTION";
+        case STRUCT:        return "STRUCT";
+        default:            return "ERROR: NOT NODE TYPE";
+    }
+}
+
 type_info_t ptr_info = {TOKEN_ADDRESSOF, 8, 1};
 type_info_t i32_info = {TOKEN_I32, 4, 1};
 type_info_t bool_info = {TOKEN_BOOL, 1, 1};
@@ -494,7 +505,9 @@ stmt_t * parse_struct_decl(lexer_t * lex) {
 
 stmt_t * parse_stmt_func_decl(lexer_t * lex) {
     // add check for TOKEN_EOF
-    type_node_t * type = parse_type(lex);
+    // TODO:
+    // check so that parsing tests work using expr_tests.in 
+
     token_t * name = take_token(lex);
     skip_token(lex, TOKEN_LPAR);
     enum TokenType peak = peak_token(lex);
@@ -522,6 +535,8 @@ stmt_t * parse_stmt_func_decl(lexer_t * lex) {
     } else {
         skip_token(lex, TOKEN_RPAR);
     }
+    skip_token(lex, TOKEN_COLON);
+    type_node_t * type = parse_type(lex);
     block = parse_stmt_block_inner(lex);
     
     stmt_func_decl_t * func_decl = malloc(sizeof(stmt_func_decl_t));
@@ -591,14 +606,9 @@ stmt_block_t * parse_program(lexer_t * lex) {
     return program;
 }
 
-int main() {
+int nomain2() {
     char * source = "-> int a = -> a;";
     lexer_t * lex = create_lexer(source, strlen(source));
-    for (size_t i = 0; i < 20; i++)
-    {
-        printf()
-    }
-    
 
     return 0;
 }

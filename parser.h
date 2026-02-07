@@ -8,7 +8,11 @@
 #define MAX_ARGS 64
 
 enum NodeType {
-    PRIMITIVE, POINTER, ARRAY, FUNCTION, STRUCT
+    PRIMITIVE,
+    POINTER,
+    ARRAY,
+    FUNCTION,
+    STRUCT
 };
 
 typedef struct {
@@ -36,6 +40,8 @@ enum ExprType {
     EXPR_NUMERAL, 
     EXPR_ID 
 };
+
+char * node_type_to_string(enum NodeType tag) ;
 
 int is_binop(enum TokenType token_type) ;
 

@@ -1,9 +1,8 @@
 #include "../scanner.h" // error is due to regex.h wsl thing
 #include "../parser.h" 
 #include <string.h>
-#include <unistd.h>
 #include <stdlib.h>
-
+#include "test_utils.h"
 
 // todo
 // 
@@ -113,12 +112,21 @@ void print_stmt_if(stmt_if_t * if_stmt, int level) {
     }
 }
 
-void print_stmt_id_decl(stmt_id_decl_t * id_decl, int level) {
-    print_level(level); printf("type:\n");
-    print_token_str(id_decl->type, level+1);
+void print_type(type_node_t * type, int level) {
+    print_level(level); printf("tag: %s\n", node_type_to_string(type->tag));
     
+    if (type->next != NULL) {
+        print_level(level); printf("next:\n");
+        print_type(type->next, level+1);
+    }
+}
+
+void print_stmt_id_decl(stmt_id_decl_t * id_decl, int level) {
     print_level(level); printf("variable:\n");
     print_token_str(id_decl->variable, level+1);
+    
+    print_level(level); printf("type:\n");
+    print_type(id_decl->type, level+1);
 
     if (id_decl->value){
         print_level(level); printf("value:\n");
@@ -156,42 +164,57 @@ void print_stmt_func_decl(stmt_func_decl_t * func_decl, int level) {
 
     print_stmt_block_inner(func_decl->block, level+1);
 }
+    
+void print_struct(stmt_struct_decl_t * struct_decl, int level) {
+    print_level(level); printf("name: \n");
+    print_token_str(struct_decl->name, level+1);    
 
+    print_level(level); printf("member_len: %d\n", struct_decl->member_len);
+    
+    for (int i = 0; i < struct_decl->member_len; i++) {
+        print_level(level); printf("members[%d]: \n", i);
+        print_stmt_id_decl(struct_decl->members[i], level+1);
+    }    
+}
 
-
+    
+    
 void print_stmt(stmt_t * stmt, int level) {
-    print_level(level); printf("STMT");
+    print_level(level); printf("STMT_");
     switch (stmt->tag) {
         case STMT_IF:
-            printf("_IF\n");
+            printf("IF\n");
             print_stmt_if(stmt->stmt_if, level+1);
             break;
         case STMT_ID_DECL:
-            printf("_ID_DECL\n");
+            printf("ID_DECL\n");
             print_stmt_id_decl(stmt->stmt_id_decl, level+1);
             break;
         case STMT_ASSIGN:
-            printf("_ASSIGN\n");
+            printf("ASSIGN\n");
             print_stmt_assign(stmt->stmt_assign, level+1);
             break;
         case STMT_FUNC_CALL:
-            printf("_FUNC_CALL\n");
+            printf("FUNC_CALL\n");
             print_expr_func_call(&stmt->func_call->func_call, level+1);
             break;
         case STMT_WHILE:
-            printf("_WHILE\n");
+            printf("WHILE\n");
             print_stmt_while(stmt->stmt_while, level+1);
             break;
         case STMT_RETURN:
-            printf("_RETURN\n");
+            printf("RETURN\n");
             print_expr(stmt->stmt_return, level+1);
             break;
         case STMT_FUNC_DECL:
-            printf("_FUNC_DECL\n");
+            printf("FUNC_DECL\n");
             print_stmt_func_decl(stmt->stmt_func_decl, level+1);
             break;
+        case STMT_STRUCT_DECL:
+            printf("STRUCT_DECL\n");
+            print_struct(stmt->stmt_struct, level+1);
         case STMT_BLOCK:
-            printf("_BLOCK\n");
+            printf("BLOCK\n");
             print_stmt_block_inner(stmt->stmt_block, level+1);
             break;
 
@@ -200,36 +223,19 @@ void print_stmt(stmt_t * stmt, int level) {
     }
 }
 
-
-char * read_file_stdin() {
-    size_t cap = 4096;
-    size_t len = 0;
-    char * buf = calloc(cap, sizeof(char));
-    int n;
-
-    while((n = read(0, buf + len, cap - len)) > 0) {
-        len += n;
-        if (len == cap) {
-            cap *= 2;
-            buf = realloc(buf, cap);
-        }
+void print_program(stmt_block_t * program) {
+    for (size_t i = 0; i < program->len; i++) {
+        print_stmt(program->stmts[i], 0);
     }
-
-    buf = realloc(buf, len + 1);
-    buf[len] = '\0';
-    return buf;
 }
 
-
 int main(int argc, char *argv[]) {
-    char * source = read_file_stdin();
-    
+    char * source;
+    int source_len; 
+    read_file_stdin(&source, &source_len);
+
     lexer_t * lex = create_lexer(source, strlen(source));
 
-    
-    // if (!fgets(file_text, sizeof(file_text), stdin))  
-    //     return 1;
-        
     printf("%s\n", lex->source);
     
     

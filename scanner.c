@@ -389,8 +389,6 @@ void skip_token(lexer_t * lex, enum TokenType skipped) {
     destroy_token(tok); // 
 }
 
-
-
 char * token_to_str(enum TokenType type) {
     switch (type) {
         case TOKEN_SEMI:        return "SEMI";
