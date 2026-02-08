@@ -506,6 +506,7 @@ stmt_t * parse_struct_decl(lexer_t * lex) {
 stmt_t * parse_stmt_func_decl(lexer_t * lex) {
     // add check for TOKEN_EOF
     // TODO:
+    // debug expr_tests.in, something wrong with syntax? Ohhhh might be id_decl syntax or something with parse_type
     // check so that parsing tests work using expr_tests.in 
 
     token_t * name = take_token(lex);
