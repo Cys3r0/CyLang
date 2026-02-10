@@ -508,7 +508,7 @@ stmt_t * parse_stmt_func_decl(lexer_t * lex) {
     // TODO:
     // debug expr_tests.in, something wrong with syntax? Ohhhh might be id_decl syntax or something with parse_type
     // check so that parsing tests work using expr_tests.in 
-    // 
+    // symbolic
 
     token_t * name = take_token(lex);
     skip_token(lex, TOKEN_LPAR);
