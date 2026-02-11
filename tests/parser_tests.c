@@ -238,9 +238,9 @@ int main(int argc, char *argv[]) {
 
     printf("%s\n", lex->source);
     
-    
-    stmt_t * stmt = parse_stmt(lex);
-    print_stmt(stmt, 0);
+
+    stmt_block_t * stmts = parse_program(lex);
+    print_program(stmts);
     return 0;
 }
 

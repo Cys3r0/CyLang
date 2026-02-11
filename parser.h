@@ -196,5 +196,7 @@ stmt_t * parse_stmt_func_decl(lexer_t * lex) ;
 
 stmt_t * parse_stmt(lexer_t * lex) ;
 
+stmt_block_t * parse_program(lexer_t * lex) ;
+
 
 #endif 
