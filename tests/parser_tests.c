@@ -230,6 +230,7 @@ void print_program(stmt_block_t * program) {
 }
 
 int main(int argc, char *argv[]) {
+    // clang -g expr_tests.c test_utils.c ../scanner.c ../parser.c
     char * source;
     int source_len; 
     read_file_stdin(&source, &source_len);
