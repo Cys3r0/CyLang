@@ -285,34 +285,36 @@ type_node_t * create_type_node(enum NodeType tag, type_info_t * info) {
 
 type_node_t * parse_type(lexer_t * lex) {
     token_t * tok = take_token(lex); // ptr or type
-    type_node_t * first = NULL;
-    type_node_t * last = NULL;
+    type_node_t * head = NULL;
+    type_node_t * tail = NULL;
     type_node_t * leaf = NULL;
+    
+    if (tok->token_type == TOKEN_ADDRESSOF) {
+        head = create_type_node(POINTER, &ptr_info);
+        tail = head;
 
-    // Not as ugly syntactically as in code here.
-    if (tok->token_type == TOKEN_ADDRESSOF) { 
-        first = create_type_node(POINTER, &ptr_info);
-        type_node_t * last = first;
+        for (size_t i = 0; i < tok->value-1; i++) {
+            tail->next = create_type_node(POINTER, &ptr_info);
+            tail = tail->next;
+        } 
+        tok = take_token(lex);
+    }
 
-        for (size_t i = 1; i < tok->value; i++) {
-            last->next = create_type_node(POINTER, &ptr_info);
-            last = last->next;
-        }
-        
-        tok = take_token(lex);  
-    } 
-
-    else if (tok->token_type == TOKEN_ID) 
+    if (tok->token_type == TOKEN_ID) 
         { leaf = create_type_node(STRUCT, NULL); }
     else if (tok->token_type == TOKEN_BOOL) 
         { leaf = create_type_node(PRIMITIVE, &bool_info); }
-    else if (tok->token_type == TOKEN_BOOL) 
+    else if (tok->token_type == TOKEN_I32) 
         { leaf = create_type_node(PRIMITIVE, &i32_info); }
     else 
         { assert(0); }
     
-    last->next = leaf;
-    return first;
+    if (tail == NULL) {
+        return leaf;
+    }
+
+    tail->next = leaf;
+    return head;
 }
 
 
@@ -356,18 +358,16 @@ stmt_t * parse_stmt_func_call(lexer_t * lex) {
     return stmt;
 }
 
-stmt_t * parse_stmt_id_decl(lexer_t * lex) {
+stmt_t * parse_id_decl(lexer_t * lex) {
     token_t * variable = take_token(lex);
     skip_token(lex, TOKEN_COLON);
     type_node_t * type = parse_type(lex);
-    enum TokenType next = take_token(lex)->token_type;
+    enum TokenType peak = peak_token(lex);
     expr_t * value = NULL;
-    
-    if (next == TOKEN_ASSIGN) {
+
+    if (peak == TOKEN_ASSIGN) {
+        skip_token(lex, TOKEN_ASSIGN);
         value = parse_expr(lex);
-        skip_token(lex, TOKEN_SEMI);
-    } else if (next == TOKEN_SEMI) {
-        value = NULL;
     }
     
     stmt_id_decl_t * id_decl = malloc(sizeof(stmt_id_decl_t));
@@ -378,8 +378,15 @@ stmt_t * parse_stmt_id_decl(lexer_t * lex) {
     stmt_t * stmt = malloc(sizeof(stmt_t));
     stmt->tag = STMT_ID_DECL;
     stmt->stmt_id_decl = id_decl;
-    return stmt;    
+    return stmt;
 }
+
+stmt_t* parse_stmt_id_decl(lexer_t * lex) {
+    stmt_t* id_decl = parse_id_decl(lex);
+    skip_token(lex, TOKEN_SEMI);
+    return id_decl;
+}
+
 
 stmt_t * parse_stmt_assign(lexer_t * lex) {
     token_t * variable = take_token(lex);
@@ -404,6 +411,8 @@ stmt_block_t * parse_stmt_block_inner(lexer_t * lex) {
     skip_token(lex, TOKEN_LWING);
     int i = 0;
     while(peak_token(lex) != TOKEN_RWING) {
+        // here there is a 
+        printf("AHH\n");
         block_add(parse_stmt(lex), block);
     }
     skip_token(lex, TOKEN_RWING);
@@ -509,7 +518,10 @@ stmt_t * parse_stmt_func_decl(lexer_t * lex) {
     // debug expr_tests.in, something wrong with syntax? Ohhhh might be id_decl syntax or something with parse_type
     // check so that parsing tests work using expr_tests.in 
 
+    
     token_t * name = take_token(lex);
+    printf("name: %s\n", token_to_str(name->token_type));
+    printf("name->lexeme: %s\n", name->lexeme);
     skip_token(lex, TOKEN_LPAR);
     enum TokenType peak = peak_token(lex);
     stmt_t ** params = NULL;
@@ -519,7 +531,7 @@ stmt_t * parse_stmt_func_decl(lexer_t * lex) {
     
     if (peak != TOKEN_RPAR) { 
         params = malloc(MAX_ARGS * sizeof(stmt_t));
-        params[i] = parse_stmt_id_decl(lex);
+        params[i] = parse_id_decl(lex);
         i++;
         peak = peak_token(lex);
         
@@ -529,7 +541,7 @@ stmt_t * parse_stmt_func_decl(lexer_t * lex) {
                 exit(EXIT_FAILURE);
             }
             skip_token(lex, TOKEN_COMMA);
-            params[i] = parse_stmt_id_decl(lex);
+            params[i] = parse_id_decl(lex);
             i++;
         }
         skip_token(lex, TOKEN_RPAR);
