@@ -411,8 +411,6 @@ stmt_block_t * parse_stmt_block_inner(lexer_t * lex) {
     skip_token(lex, TOKEN_LWING);
     int i = 0;
     while(peak_token(lex) != TOKEN_RWING) {
-        // here there is a 
-        printf("AHH\n");
         block_add(parse_stmt(lex), block);
     }
     skip_token(lex, TOKEN_RWING);
@@ -458,11 +456,8 @@ stmt_t * parse_stmt_if(lexer_t * lex) {
     stmt_block_t * or_else = NULL;
     
     if (peak_token(lex) == TOKEN_ELSE) {
-        skip_token(lex, TOKEN_ELSE);
-        
+        skip_token(lex, TOKEN_ELSE);        
         or_else = parse_stmt_block_inner(lex);
-        
-        take_token(lex); 
     }
     
     stmt_if_t * if_stmt = malloc(sizeof(stmt_while_t));
@@ -593,7 +588,7 @@ stmt_t * parse_stmt(lexer_t * lex) {
                 case TOKEN_ASSIGN:
                     stmt = parse_stmt_assign(lex);
                     break;
-                case TOKEN_ID:
+                case TOKEN_COLON:
                     stmt = parse_stmt_id_decl(lex);
                     break;
                 default: break;
@@ -606,16 +601,23 @@ stmt_t * parse_stmt(lexer_t * lex) {
 }
 
 stmt_t * parse_outer(lexer_t * lex) {
-    if (peak_token(lex) == TOKEN_STRUCT) 
-        { return parse_struct_decl(lex); } 
-    return parse_stmt_func_decl(lex);
+    enum TokenType peak = peak_token(lex);
+
+    if (peak == TOKEN_STRUCT) { 
+        return parse_struct_decl(lex); 
+    } 
+    if (peak == TOKEN_ID) {
+        return parse_stmt_func_decl(lex);
+    } 
+    return NULL;
 }
 
 stmt_block_t * parse_program(lexer_t * lex) {
     stmt_block_t * program = create_block();
     stmt_t * stmt;
-    while ((stmt = parse_outer(lex))) 
+    while ((stmt = parse_outer(lex)) != NULL) {
         block_add(stmt, program);
+    }
     
     return program;
 }

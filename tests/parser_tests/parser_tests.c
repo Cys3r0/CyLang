@@ -1,8 +1,8 @@
-#include "../scanner.h" // error is due to regex.h wsl thing
-#include "../parser.h" 
+#include "../../scanner.h" // error is due to regex.h wsl thing
+#include "../../parser.h" 
 #include <string.h>
 #include <stdlib.h>
-#include "test_utils.h"
+#include "../test_utils.h"
 
 // todo
 // 
@@ -162,6 +162,7 @@ void print_stmt_func_decl(stmt_func_decl_t * func_decl, int level) {
         print_stmt(func_decl->params[i], level+1);
     }
 
+    print_level(level); printf("block: \n");
     print_stmt_block_inner(func_decl->block, level+1);
 }
     
@@ -230,14 +231,15 @@ void print_program(stmt_block_t * program) {
 }
 
 int main(int argc, char *argv[]) {
-    // clang -g expr_tests.c test_utils.c ../scanner.c ../parser.c
+    // clang -g parser_tests.c test_utils.c ../scanner.c ../parser.c
     char * source;
     int source_len; 
     read_file_stdin(&source, &source_len);
 
     lexer_t * lex = create_lexer(source, strlen(source));
 
-    printf("%s\n", lex->source);
+    printf("%s\n\n\n", lex->source);
+    
     
 
     stmt_block_t * stmts = parse_program(lex);

@@ -1,0 +1,4 @@
+main():: i32 { 
+    a: bool = func(func(12*2+3^^19^^2), diff(), 200);  
+    return a;
+}

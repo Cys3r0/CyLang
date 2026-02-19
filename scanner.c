@@ -336,6 +336,7 @@ token_t * scan_next_tok(lexer_t * lex) {
     }
 
     lex->take_i += end_offset;
+    // printf("Scanned token: %s\n", token_to_str(token_type));
     return create_token(token_type, lex->row, lex->col, lexeme, value);
 }
 
