@@ -15,11 +15,18 @@ enum NodeType {
     STRUCT
 };
 
+typedef struct type_node_t type_node_t;
+
 typedef struct {
     enum TokenType type;
     size_t byte_size;
     int alignment;
+    type_info_t members;
 } type_info_t;
+
+extern type_info_t ptr_info;
+extern type_info_t i32_info;
+extern type_info_t bool_info;
 
 typedef struct type_node_t type_node_t;
 
@@ -29,10 +36,6 @@ struct type_node_t {
     type_info_t * info;
 };
 
-extern type_info_t ptr_info;
-extern type_info_t i32_info;
-extern type_info_t bool_info;
-
 enum ExprType { 
     EXPR_BINOP, 
     EXPR_UNARY, 
@@ -40,6 +43,8 @@ enum ExprType {
     EXPR_NUMERAL, 
     EXPR_ID 
 };
+
+type_node_t * create_type_node(enum NodeType tag, type_info_t * info) ;
 
 char * node_type_to_string(enum NodeType tag) ;
 

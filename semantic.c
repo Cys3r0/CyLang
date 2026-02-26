@@ -76,8 +76,9 @@ uint64_t hash_str(const unsigned char *s) {
     // hashing function stolen from wikipedia
     __uint128_t h = (__uint128_t)(a[0]);
     
-    for (int i = 0; i < MAX_LEXEME_LENGTH; i++)
-    h += (__uint128_t)(a[i + 1]) * (__uint128_t)(s[i]);
+    for (int i = 0; i < MAX_LEXEME_LENGTH; i++) {
+        h += (__uint128_t)(a[i + 1]) * (__uint128_t)(s[i]);
+    }
     
     return (uint64_t)(h >> W);
 }
@@ -112,7 +113,7 @@ void ht_resize(htable_t * table, int make_bigger) {
 }
 
 
-int ht_put(htable_t * table, char * key, void * value) {
+int put(htable_t * table, char * key, void * value) {
     // returns 0 if key was already in table
     entry_t curr_entry;
     int j;
@@ -155,7 +156,7 @@ int ht_put(htable_t * table, char * key, void * value) {
     exit(EXIT_FAILURE);
 }
 
-void * ht_get(htable_t * table, char * key) {
+void* get(htable_t * table, char * key) {
     entry_t curr_entry;
     int hash_idx;
     
@@ -177,7 +178,7 @@ void * ht_get(htable_t * table, char * key) {
     exit(EXIT_FAILURE);   
 }
 
-int ht_contains(htable_t * table, char * key) {
+int contains(htable_t * table, char * key) {
     entry_t curr_entry;
     int hash_idx;
     
@@ -199,7 +200,7 @@ int ht_contains(htable_t * table, char * key) {
     exit(EXIT_FAILURE);  
 } 
 
-void * ht_del(htable_t * table, char * key) {
+void * del(htable_t * table, char * key) {
     entry_t curr_entry;
     int hash_idx;
     
@@ -235,7 +236,7 @@ symbol_stack_t * create_symbol_stack() {
     return syms;
 }
 
-void sym_stack_push(symbol_stack_t * syms) {
+void push(symbol_stack_t * syms) {
     if (syms->len+1 == syms->cap) {
         printf("ERROR: Symbol stack overfull.");
         exit(EXIT_FAILURE);
@@ -244,31 +245,20 @@ void sym_stack_push(symbol_stack_t * syms) {
     syms->tables[ syms->len++ ] = create_hash_table();
 }
 
-void sym_stack_pop(symbol_stack_t * syms) {
+void pop(symbol_stack_t * syms) {
     if (syms->len-1 < 0) {
         printf("ERROR: Symbol stack popped while empty.");
         exit(EXIT_FAILURE);
     }
-
-    syms->tables[ --syms->len ] = NULL;
+    syms->len--;
+    syms->tables[ syms->len ] = NULL;
 }
-
-typedef struct {
-    type_id_t * type;
-    size_t byte_size;
-    int nesting; // level of nesting
-    // offset func decl 
-} type_info_t;
-
-type_id_t * create_type_id(int ptr, enum TokenType type) {
-    type_id_t * new_type = calloc(1, sizeof(type_id_t));
-    new_type->ptr = ptr;
-    new_type->type = type;
-}
-
 
 // TODO:
-// fix a program vector that can be iterate through.
+// impl type_nodes here. 
+// impl type_nodes comparison.
+
+// solved a program vector that can be iterate through.
 // add checks for visit expr
 
 // NOTE:
@@ -276,106 +266,127 @@ type_id_t * create_type_id(int ptr, enum TokenType type) {
 // to determine its token type. If the identifier is found in the Ordinary Namespace as a 
 // typedef, the lexer returns a TYPE_NAME token; otherwise, it returns an IDENTIFIER token."
 
-
-type_info_t * create_type_info (type_id_t * type, int nesting) {
-    type_info_t * type_info = calloc(1, sizeof(type_info_t));
-    type_info->type = type;
-    type_info->byte_size = 4; // TEMPORARY
-    type_info->nesting = nesting;
-    return type_info;
-}
-
-
 // for this to error, maybe pass a token to error at the note.
 int sym_contains_name(symbol_stack_t * syms, char * name) {
     for (size_t i = syms->len-1; i >= 0; i--) {
-        if (ht_contains(syms->tables[i], name)) {
+        if (contains(syms->tables[i], name)) {
             return 1; }}
     
     return 0;
 }
 
-int sym_contains_type(symbol_stack_t * syms, type_id_t * type) {
-    if (!(ht_contains(syms->type_table, type) || is_primitive(type->type))) 
-        { printf("ERROR: type not defined."); exit(EXIT_FAILURE); }
+int same_type(type_node_t* left, type_node_t* right) {
+    if (left->info != right->info) {
+        return 0;
+    } 
+    if (left->next == NULL && right->next == NULL) {
+        return 1;
+    }
+    if (left->next == NULL || right->next == NULL) {
+        return 0;
+    } 
+    return same_type(left->next, right->next);
+}
+
+int sym_contains_type(symbol_stack_t * syms, type_node_t * type) {
+    if (!(contains(syms->type_table, type) || is_primitive(type->type))) { 
+        printf("ERROR: type not defined."); exit(EXIT_FAILURE); 
+    }
     return 1;
 }
 
-type_id_t * sym_get_type(symbol_stack_t * syms, char * name) {
-    type_info_t * t;
+type_node_t * sym_get_type(symbol_stack_t* syms, char* name) {
+    type_info_t* t;
     for (size_t i = syms->len-1; i >= 0; i--) {
-        if (t = ht_get(syms->tables[i], name)) 
-            { return t->type; } }
+        if (t = (type_info_t*) get(syms->tables[i], name)) { 
+            return t; 
+        } 
+    }
 
+    // add error tracking here.
     printf("ERROR: name not defined."); 
     exit(EXIT_FAILURE);
 }
 
-// needs refactor
-type_id_t * visit_expr(symbol_stack_t * syms, expr_t * e) {
+void deref(type_node_t** type) {
+    if ((*type)->tag != POINTER) {
+        // add error tracking here.
+        printf("Can not deref non-pointer.\n");
+        exit(EXIT_FAILURE);
+    }
+    *type = (*type)->next;
+}
+
+void addressof(type_node_t* type) {
+    type_node_t* outer_ptr = create_type_node(POINTER, &ptr_info);
+    outer_ptr->next = type;
+    return outer_ptr;
+}
+
+type_node_t * visit_expr(symbol_stack_t * syms, expr_t * e) {
     // memory leaky with all the callocs for each type.
     // this needs a free_expr_chain. How would that be implemented
+    type_node_t* expected = NULL;
+    type_node_t* ret      = NULL; 
     switch (e->tag) {
         case EXPR_BINOP:
             enum TokenType op_type = e->binop.op;
-            enum TokenType expected = TOKEN_EOF;
-            enum TokenType ret = TOKEN_EOF;
 
-            type_id_t * left = visit_expr(syms, e->binop.left);
-            type_id_t * right = visit_expr(syms, e->binop.right);
+            type_node_t* left = visit_expr(syms, e->binop.left);
+            type_node_t* right = visit_expr(syms, e->binop.right);
 
-            if (   op_type == TOKEN_ADD     || op_type == TOKEN_MUL
-                || op_type == TOKEN_SUB     || op_type == TOKEN_DIV
-                || op_type == TOKEN_MOD     || op_type == TOKEN_EXPONENT
-                || op_type == TOKEN_BIT_AND || op_type == TOKEN_BIT_OR
-                || op_type == TOKEN_BIT_XOR ) {
-                expected = ret = TOKEN_NUM;
+            if ( is_binop(op_type) ) {
+                expected = ret = &(type_node_t){PRIMITIVE, NULL, &i32_info}; 
             }
             else if (op_type == TOKEN_EQ  || op_type == TOKEN_NEQ
                   || op_type == TOKEN_GEQ || op_type == TOKEN_GT
                   || op_type == TOKEN_LEQ || op_type == TOKEN_LT) {
-                expected = TOKEN_NUM;
-                ret = TOKEN_BOOL;
+                expected = &(type_node_t){PRIMITIVE, NULL, &i32_info};
+                ret = &(type_node_t){PRIMITIVE, NULL, &bool_info};
+            } 
+            else if (op_type == TOKEN_LOG_AND || op_type == TOKEN_LOG_OR) { 
+                expected = ret = &(type_node_t){PRIMITIVE, NULL, &bool_info}; 
             }
-            else if (op_type == TOKEN_LOG_AND || op_type == TOKEN_LOG_OR) 
-                { expected = ret = TOKEN_BOOL; }
+            
+            if (!same_type(left, &expected) || !same_type(right, &expected)) { 
+                printf("ERROR: type doesn't match expected. \n"); 
+                exit(EXIT_FAILURE); 
+            }
 
-            if (left->ptr || right->ptr || (left->type != expected) || (right->type != expected)) 
-                { printf("ERROR: type doesn't match expected. \n"); exit(EXIT_FAILURE); }
-
-            return create_type_id(0, ret);
+            return create_type_node(PRIMITIVE, &bool_info);
         case EXPR_FUNC_CALL:
-            stmt_func_decl_t * func_decl = ht_get(syms->func_id_to_func, e->func_call.func_id);
+            stmt_func_decl_t * func_decl = get(syms->func_id_to_func, e->func_call.func_id);
             if (!func_decl) 
                 { printf("ERROR: function not defined.\n"); exit(EXIT_FAILURE); }
             return func_decl->type;
         case EXPR_NUMERAL:
-            return create_type_id(0, TOKEN_NUM);
+            return create_type_node(PRIMITIVE, &i32_info);
         case EXPR_UNARY:
-            type_id_t * type_inner = visit_expr(syms, e->unary.inner);
-            enum TokenType expected = TOKEN_EOF;
-            int ptr = 0;
+            type_node_t * actual = visit_expr(syms, e->unary.inner);
 
-            if (e->unary.op == TOKEN_ADD || e->unary.op == TOKEN_ADD || e->unary.op == TOKEN_BIT_NOT) 
-                { expected = TOKEN_NUM; }
-            else if (e->unary.op == TOKEN_LOG_NOT)  
-                { expected = TOKEN_BOOL; } 
-            else if (e->unary.op == TOKEN_DEREF)  
-                { ptr = 1; }            
-            else if (e->unary.op == TOKEN_ADDRESSOF)  
-                { ptr = -1; }    
-            else 
-                { assert(0); } // unreachable (hopely)
+            if (e->unary.op == TOKEN_ADD || e->unary.op == TOKEN_SUB || e->unary.op == TOKEN_BIT_NOT) { 
+                expected = create_type_node(PRIMITIVE, &i32_info); 
+            } else if (e->unary.op == TOKEN_LOG_NOT) { 
+                expected = create_type_node(PRIMITIVE, &bool_info); 
+            } else if (e->unary.op == TOKEN_DEREF) { 
+                deref(actual);
+            } else if (e->unary.op == TOKEN_ADDRESSOF) { 
+                addressof(actual);
+            } else { 
+                assert(0); 
+            } 
 
-            if (expected == TOKEN_EOF) 
-                { return create_type_id(type_inner->ptr + ptr, type_inner->type); }
+            if (expected == NULL) { 
+                return actual; 
+            }
 
-            if (type_inner->type == expected)
-                { printf("ERROR: inner type not expected"); exit(EXIT_FAILURE); }
-
-            // works for now
-            return create_type_id(type_inner->ptr + ptr, type_inner->type);
-
+            if (!same_type(expected, actual)) { 
+                printf("ERROR: inner type not expected"); 
+                exit(EXIT_FAILURE); 
+            }
+            
+            return actual;
+            
         case EXPR_ID:
             return sym_get_type(syms, e->id.lexeme);
     }    
@@ -383,51 +394,54 @@ type_id_t * visit_expr(symbol_stack_t * syms, expr_t * e) {
     assert(0); 
 }
 
-void typecheck_expr(symbol_stack_t * syms, expr_t * e, type_id_t * expected) {
-    type_id_t * actual = visit_expr(syms, e);
+void typecheck_expr(symbol_stack_t * syms, expr_t * e, type_node_t * expected) {
+    type_node_t * actual = visit_expr(syms, e);
 
-    if (actual->ptr != expected->ptr || actual->type != expected->type) 
-        { printf("ERROR: return type doesn't match.\n"); exit(EXIT_FAILURE); }
+    if (!same_type(expected, actual)) { 
+        printf("ERROR: return type doesn't match.\n"); exit(EXIT_FAILURE); 
+    }
 }
 
 
 void visit_stmt_block(symbol_stack_t * syms, stmt_block_t * block) {
-    sym_stack_push(syms);
+    push(syms);
     for (size_t i = 0; i < block->len; i++) {
         visit_stmt(syms, block->stmts[i]);
     }
-    sym_stack_pop(syms);
+    pop(syms);
 }
 
 void visit_func_decl(symbol_stack_t * syms, stmt_func_decl_t * func_decl) {
     sym_contains_type(syms, func_decl->type);
-    if (!ht_contains(syms->tables[0], func_decl->func_id->lexeme))
-        { ht_put(syms->tables[0], func_decl->func_id->lexeme, func_decl->type); }
+        if (!contains(syms->table, func_decl->func_ids[0], func_decl->func_->lexeme))--;
+        { put(syms->tables[, func_decl->func_id->lexeme, func_decl->type); }
 
-    sym_stack_push(syms);
+    push(syms);
     for (size_t i = 0; i < func_decl->param_len; i++) {
         char * name = func_decl->params[i]->stmt_id_decl->variable;
-        ht_put(syms->tables[syms->len-1], name, func_decl->type);
+        put(syms->tables[syms->len-1], name, func_decl->type);
     }
     
     for (size_t i = 0; i < func_decl->block->len; i++) {
         visit_stmt(syms, func_decl->block->stmts[i]);
     }
-    sym_stack_pop(syms);
+    pop(syms);
 }
 
 
 void visit_stmt_id_decl(symbol_stack_t * syms, stmt_id_decl_t * id_decl) {
     sym_contains_type(syms, id_decl->type);
-
-    // avoids int i = i; where 'i' already exists in an outer scope. I think.
-    if (id_decl->value) 
-        { typecheck_expr(syms , id_decl->value, id_decl->type); }
+    i; where--;
+    // avoids int i =  where 'i' already exists in an outer scope. I think.
+    if (id_decl->value) { 
+        typecheck_expr(syms , id_decl->value, id_decl->type); 
+    }
     
-    if (ht_contains(syms->tables[syms->len - 1], id_decl->variable->lexeme))
-        { ht_put(syms->tables[syms->len - 1], id_decl->variable, id_decl->type); }
+    if (contains(syms->tables[syms->len - 1], id_decl->variable->lexeme)) { 
+        put(syms->tables[syms->len - 1], id_decl->variable, id_decl->type); 
+    }
 
-    ht_put(syms->tables[syms->len-1], id_decl->variable, id_decl->type);
+    put(syms->tables[syms->len-1], id_decl->variable, id_decl->type);
 }
 
 void visit_stmt_assign(symbol_stack_t * syms, stmt_assign_t * assign) {
@@ -437,24 +451,25 @@ void visit_stmt_assign(symbol_stack_t * syms, stmt_assign_t * assign) {
 
 
 void visit_stmt_while(symbol_stack_t * syms, stmt_while_t * while_stmt) {
-    typecheck_expr(syms, while_stmt->cond, &(type_id_t){0, TOKEN_BOOL});
+    typecheck_expr(syms, while_stmt->cond, &(type_node_t){PRIMITIVE, &bool_info});
     visit_block_stmt(while_stmt->block);
 }
 
 void visit_stmt_if(symbol_stack_t * syms, stmt_if_t * if_stmt) {
-    typecheck_expr(syms, if_stmt->cond, &(type_id_t){0, TOKEN_BOOL});
+    typecheck_expr(syms, if_stmt->cond, &(type_node_t){PRIMITIVE, &bool_info});
     visit_block_stmt(if_stmt->then);
-    if (if_stmt->or_else) 
-        { visit_block_stmt(if_stmt->or_else); }
+    if (if_stmt->or_else) { 
+        visit_block_stmt(if_stmt->or_else); 
+    }
 }
 
 void visit_stmt_return(symbol_stack_t * syms, expr_t * ret_expr) { 
-    type_id_t * expected = syms->curr_func->type;
+    type_node_t * expected = syms->curr_func->type;
     typecheck_expr(syms, ret_expr, expected);
 } 
 
 enum TokenType binop_expected(enum TokenType t) { 
-    if (t == TOKEN_SUB || t == TOKEN_ADD) return TOKEN_NUM;
+    if (t == TOKEN_SUB || t == TOKEN_ADD)   return TOKEN_NUM;
     if (t == TOKEN_DEREF) return TOKEN_NUM;
     assert(0);
 }
@@ -479,16 +494,30 @@ enum TokenType binop_expected(enum TokenType t) {
     NEXT: Fix type-matching parsing.
 */
 
-void visit_struct_decl(symbol_stack_t * syms, stmt_struct_decl_t * struct_decl) {
-    // this is where type_info should be added. I'll so it later.
+type_info_t* create_struct_type_info() {
+    
+}
 
+typedef struct {
+    char* name;
+    type_node_t type;
+    int offset;
+} member_record_t;
+// TODO:
+// 1. Figure out alignment in structs.
+void visit_struct_decl(symbol_stack_t * syms, stmt_struct_decl_t * struct_decl) {
+    // this is where type_info should be added.
+    type_info_t** members = calloc(struct_decl->member_len, sizeof(type_info_t));
     
     for (size_t i = 0; i < struct_decl->member_len; i++) {
-        
+        members[i] = struct_decl->members[i]->type
+        type_node_t* type = struct_decl->members[i]->type;
+
+        if (contains(syms->tables[0], name)) {
+            printf("\n");
+        }
     }
-    
-    
-    ht_add(syms->tables[0], );
+    put(syms->tables[0], struct_decl->name, );
 }
 
 void visit_stmt(symbol_stack_t * syms, stmt_t * stmt) {
