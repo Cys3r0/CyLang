@@ -122,8 +122,8 @@ void print_type(type_node_t * type, int level) {
 }
 
 void print_stmt_id_decl(stmt_id_decl_t * id_decl, int level) {
-    print_level(level); printf("variable:\n");
-    print_token_str(id_decl->variable, level+1);
+    print_level(level); printf("name:\n");
+    print_token_str(id_decl->name, level+1);
     
     print_level(level); printf("type:\n");
     print_type(id_decl->type, level+1);
@@ -135,8 +135,8 @@ void print_stmt_id_decl(stmt_id_decl_t * id_decl, int level) {
 }
 
 void print_stmt_assign(stmt_assign_t * assign, int level) {
-    print_level(level); printf("variable:\n");
-    print_token_str(assign->variable, level+1);
+    print_level(level); printf("name:\n");
+    print_token_str(assign->name, level+1);
 
     print_level(level); printf("value:\n");
     print_expr(assign->value, level+1);

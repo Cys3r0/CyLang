@@ -34,9 +34,9 @@ char * node_type_to_string(enum NodeType tag) {
     }
 }
 
-type_info_t ptr_info = {TOKEN_ADDRESSOF, 8, 1};
-type_info_t i32_info = {TOKEN_I32, 4, 1};
-type_info_t bool_info = {TOKEN_BOOL, 1, 1};
+type_info_t ptr_info = {TOKEN_ADDRESSOF, 8, 1, NULL};
+type_info_t i32_info = {TOKEN_I32, 4, 1, NULL};
+type_info_t bool_info = {TOKEN_BOOL, 1, 1, NULL};
 
 int is_binop(enum TokenType token_type) {
     return     token_type == TOKEN_ADD
@@ -359,7 +359,7 @@ stmt_t * parse_stmt_func_call(lexer_t * lex) {
 }
 
 stmt_t * parse_id_decl(lexer_t * lex) {
-    token_t * variable = take_token(lex);
+    token_t * name = take_token(lex);
     skip_token(lex, TOKEN_COLON);
     type_node_t * type = parse_type(lex);
     enum TokenType peak = peak_token(lex);
@@ -372,7 +372,7 @@ stmt_t * parse_id_decl(lexer_t * lex) {
     
     stmt_id_decl_t * id_decl = malloc(sizeof(stmt_id_decl_t));
     id_decl->type = type;
-    id_decl->variable = variable;
+    id_decl->name = name;
     id_decl->value = value;
     
     stmt_t * stmt = malloc(sizeof(stmt_t));
@@ -389,13 +389,13 @@ stmt_t* parse_stmt_id_decl(lexer_t * lex) {
 
 
 stmt_t * parse_stmt_assign(lexer_t * lex) {
-    token_t * variable = take_token(lex);
+    token_t * name = take_token(lex);
     skip_token(lex, TOKEN_ASSIGN);
     expr_t * value = parse_expr(lex);
     skip_token(lex, TOKEN_SEMI);
     
     stmt_assign_t * assign = malloc(sizeof(stmt_assign_t));
-    assign->variable = variable;
+    assign->name = name;
     assign->value = value;
     
     stmt_t * stmt = malloc(sizeof(stmt_t));
@@ -647,7 +647,7 @@ int nomain2() {
 //     if (stmt->tag == STMT_ID_DECL) {
 //         printf("STMT_ID_DECL\n");
 //         printf("type: %s, name: %s, value: %d \n", 
-//             stmt->stmt_id_decl->type->str, stmt->stmt_id_decl->variable->str, stmt->stmt_id_decl->value->numeral.value);
+//             stmt->stmt_id_decl->type->str, stmt->stmt_id_decl->name->str, stmt->stmt_id_decl->value->numeral.value);
 //     }
 //     // token_t * next = take_token(lex);
 //     // expr_t * e = parse_expr(lex);

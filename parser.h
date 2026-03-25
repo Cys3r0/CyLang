@@ -16,19 +16,18 @@ enum NodeType {
 };
 
 typedef struct type_node_t type_node_t;
+typedef struct type_info_t type_info_t;
 
-typedef struct {
+struct type_info_t{
     enum TokenType type;
     size_t byte_size;
     int alignment;
-    type_info_t members;
-} type_info_t;
+    type_node_t** members;
+};
 
 extern type_info_t ptr_info;
 extern type_info_t i32_info;
 extern type_info_t bool_info;
-
-typedef struct type_node_t type_node_t;
 
 struct type_node_t {
     enum NodeType tag;
@@ -58,7 +57,7 @@ int is_atom(enum ExprType type) ;
 
 int precedence_of(enum TokenType token_type) ;
 
-typedef struct expr expr_t;
+typedef struct expr     expr_t;
 
 typedef struct {
     enum TokenType op;
@@ -141,12 +140,12 @@ typedef struct {
 
 typedef struct {
     type_node_t * type;
-    token_t * variable;
+    token_t * name;
     expr_t * value;
 } stmt_id_decl_t;
 
 typedef struct {
-    token_t * variable;
+    token_t * name;
     expr_t * value;
 } stmt_assign_t;
 
